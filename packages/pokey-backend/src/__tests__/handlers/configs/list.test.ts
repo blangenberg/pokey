@@ -1,0 +1,25 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { createConfigListHandler } from '../../../handlers/configs/list';
+import { createMockDependencies, type MockDependencies } from '../../helpers/mock-dependencies';
+
+describe('config-list handler', () => {
+  let deps: MockDependencies;
+  beforeEach(() => {
+    deps = createMockDependencies();
+  });
+
+  it('returns 400 when schemaId is missing', async () => {
+    const handler = createConfigListHandler(deps);
+    const res = await handler({ pathParameters: {}, queryParameters: { limit: '10' }, body: undefined });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('returns paginated list for a schemaId', async () => {
+    deps.dataLayer.query.mockResolvedValue({ items: [{ id: 'c1' }], lastEvaluatedKey: undefined });
+    const handler = createConfigListHandler(deps);
+    const res = await handler({ pathParameters: {}, queryParameters: { schemaId: 's1', limit: '10' }, body: undefined });
+    expect(res.statusCode).toBe(200);
+    const body = res.body as Record<string, unknown>;
+    expect(body['items']).toHaveLength(1);
+  });
+});

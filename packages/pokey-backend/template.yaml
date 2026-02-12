@@ -1,0 +1,218 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Pokey – Schema-driven configuration system
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        DYNAMODB_ENDPOINT: ''
+        AWS_REGION_NAME: us-east-1
+
+Resources:
+  # ── DynamoDB Tables ──────────────────────────────────────────────────────
+
+  SchemasTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Schemas
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: name
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: schemas-name-index
+          KeySchema:
+            - AttributeName: name
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: schemas-status-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  ConfigurationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Configurations
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: name
+          AttributeType: S
+        - AttributeName: schemaId
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: configs-name-index
+          KeySchema:
+            - AttributeName: name
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: configs-schemaId-index
+          KeySchema:
+            - AttributeName: schemaId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  # ── Schema Functions ─────────────────────────────────────────────────────
+
+  SchemaGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dist/lambda/schema-get.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /schemas/{id}
+            Method: get
+
+  SchemaListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dist/lambda/schema-list.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /schemas
+            Method: get
+
+  SchemaCreateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dist/lambda/schema-create.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /schemas
+            Method: post
+
+  SchemaUpdateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dist/lambda/schema-update.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /schemas/{id}
+            Method: put
+
+  SchemaDisableFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dist/lambda/schema-disable.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /schemas/{id}/disable
+            Method: post
+
+  SchemaActivateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dist/lambda/schema-activate.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /schemas/{id}/activate
+            Method: post
+
+  # ── Config Functions ─────────────────────────────────────────────────────
+
+  ConfigGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dist/lambda/config-get.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /configs/{id}
+            Method: get
+
+  ConfigListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dist/lambda/config-list.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /configs
+            Method: get
+
+  ConfigCreateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dist/lambda/config-create.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /configs
+            Method: post
+
+  ConfigUpdateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dist/lambda/config-update.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /configs/{id}
+            Method: put
+
+  ConfigDisableFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dist/lambda/config-disable.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /configs/{id}/disable
+            Method: post
+
+  ConfigActivateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dist/lambda/config-activate.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /configs/{id}/activate
+            Method: post

@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# DynamoDB local
+docker/dynamodb-data/
+
+# AWS SAM
+.aws-sam/
+
+# Ladle
+.ladle/build/
