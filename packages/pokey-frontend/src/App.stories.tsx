@@ -1,3 +1,3 @@
 import { App } from './App';
 
-export const Default = () => <App />;
+export const Default = (): React.JSX.Element => <App />;
