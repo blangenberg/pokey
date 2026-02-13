@@ -6,18 +6,20 @@
     "packages/*"
   ],
   "scripts": {
+    "backend:sanity-check": "npx tsx scripts/backend-sanity-check.ts",
     "build": "npm run build -w pokey-common && npm run build -w pokey-backend && npm run build -w pokey-frontend",
-    "start": "concurrently --names backend,frontend --prefix-colors blue,green \"npm run dev -w pokey-backend\" \"npm run dev -w pokey-frontend\"",
-    "test": "npm test --workspaces --if-present",
-    "lint": "eslint .",
+    "clean:db": "bash scripts/clean-db.sh",
     "format": "prettier --write \"packages/**/*.{ts,tsx,json,css,html}\"",
     "format:check": "prettier --check \"packages/**/*.{ts,tsx,json,css,html}\"",
-    "prepare": "husky",
     "init": "npm run init:podman && npm run init:node && npm run init:db && npm run init:build",
-    "init:podman": "bash scripts/init-podman.sh",
+    "init:build": "npm run build",
     "init:db": "bash scripts/init-db.sh",
     "init:node": "bash scripts/init-node.sh",
-    "init:build": "npm run build"
+    "init:podman": "bash scripts/init-podman.sh",
+    "lint": "eslint .",
+    "prepare": "husky",
+    "start": "npm run init:db && concurrently --names backend,frontend --prefix-colors blue,green \"npm run dev -w pokey-backend\" \"npm run dev -w pokey-frontend\"",
+    "test": "npm test --workspaces --if-present"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
