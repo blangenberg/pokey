@@ -1,0 +1,94 @@
+# Pokey – Cursor Rules
+
+## Git Policy
+
+**NEVER run git commands (add, commit, push, stash, reset, etc.) unless the user EXPLICITLY asks you to.** This is the highest-priority rule. Do not stage, commit, or push changes on your own initiative under any circumstances.
+
+## Project Overview
+
+Pokey is a schema-driven configuration system. It is a TypeScript monorepo with three NPM workspace packages:
+
+- `packages/pokey-common` – Shared TypeScript types, enums, and API contracts
+- `packages/pokey-backend` – Express (local) / AWS Lambda (prod) serverless functions + DynamoDB
+- `packages/pokey-frontend` – React SPA (Vite)
+
+## Architecture Conventions
+
+### Monorepo
+
+- NPM workspaces (not Yarn, not pnpm).
+- Build order matters: common → backend → frontend.
+- Shared types and enums live in `pokey-common`. Do not duplicate them in other packages.
+
+### Backend
+
+- **Adapter pattern**: Every handler is a pure function `(HandlerRequest) => Promise<HandlerResponse>`. Thin adapters convert between Lambda events / Express requests and this common shape. Never duplicate handler logic across adapters.
+- **Constructor dependency injection**: The `DataLayer`, `Observability`, `DateTimeHelper`, and `UuidHelper` are injected via `HandlerDependencies`. Never instantiate classes statically at module scope — it breaks testability.
+- **Observability in every handler**: Each handler must call `trackEvent`, `startTimer`, and handle errors via `logError`. Use the `MetricEvent` and `ErrorCode` enums from `pokey-common`.
+- **Ajv validation**: `additionalProperties` must always be `true` on stored schemas. Use `ensureAdditionalProperties()` when saving.
+- **Backward-compatibility on schema update**: Use `checkSchemaCompatibility()`. Adding optional properties is safe; removing required properties or changing types is not.
+- **DynamoDB**: Use the `DataLayer` abstraction — never call the AWS SDK directly from handlers. Table names come from `constants.ts`.
+- **Express is for local dev only**. AWS SAM (`template.yaml`) is the production deployment framework.
+- **Ky for HTTP** (frontend). Do NOT use Axios.
+
+### Frontend
+
+- React with Vite.
+- Ladle for component stories (not Storybook).
+- Ky as the HTTP client. Do not use Axios.
+
+## TypeScript Rules
+
+- **STRICT TypeScript everywhere.** `strict: true` in tsconfig, plus `noUncheckedIndexedAccess`, `noImplicitReturns`, `noFallthroughCasesInSwitch`.
+- **No `any`.** Use `unknown` when a flexible type is needed. ESLint enforces `@typescript-eslint/no-explicit-any: error`.
+- **Explicit return types on all functions** (except in test files). ESLint enforces `@typescript-eslint/explicit-function-return-type: error`.
+- **All function parameters must be typed.** `noImplicitAny` (from `strict`) prevents untyped params.
+- Use `unknown` over `any`. Use `Record<string, unknown>` for generic object shapes.
+- Prefer `type` imports (`import type { ... }`) when importing only types.
+
+## Coding Style
+
+- **camelCase** for variables, functions, and file names.
+- **Prettier** with 140 character width. Config is in `.prettierrc`.
+- **ESLint** with `typescript-eslint` strict type-checked config. Config is in `eslint.config.mjs`.
+- **Husky + lint-staged** runs ESLint and Prettier on pre-commit.
+- Stateless business logic should be extracted into helper functions, especially when reused.
+- Never initialize classes statically in file scope. Always use factory functions or constructor injection.
+
+## Testing
+
+- **Vitest** for all packages.
+- Backend handler tests use `createMockDependencies()` from `__tests__/helpers/mock-dependencies.ts`.
+- Test files are exempt from explicit-function-return-type.
+- Unit test stateless helpers (schema compatibility, pagination, etc.) and handler functions (with mocked dependencies).
+
+## Status Codes
+
+- 200: success
+- 400: bad request
+- 404: not found or disabled
+- 406: configData fails schema validation
+- 409: name conflict
+- 422: malformed schemaData/configData (cannot be parsed by Ajv)
+
+## File Organization
+
+```
+packages/pokey-backend/src/
+  abstractions/     – DataLayer, Observability, DateTimeHelper, UuidHelper
+  adapters/         – lambda-adapter, express-adapter, shared types
+  handlers/
+    schemas/        – get, list, create, update, disable, activate
+    configs/        – get, list, create, update, disable, activate
+  helpers/          – schema-compatibility, pagination, ensure-additional-properties
+  lambda/           – Lambda entry points (thin wiring, not tested directly)
+  routes/           – Express route registration
+  tables/           – DynamoDB table setup script
+  constants.ts      – Table names, region, limits
+  dependencies.ts   – Factory for HandlerDependencies
+  index.ts          – Express dev server entry point
+```
+
+## Do Not Modify
+
+- `INIT_PROMPT.md` — never change this file.
