@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createConfigDisableHandler } from '../../../handlers/configs/disable';
+import { createConfigDisableHandler } from '../../../handlers/config-handlers/disable';
 import { createMockDependencies, type MockDependencies } from '../../helpers/mock-dependencies';
 import { ConfigStatus } from 'pokey-common';
 import type { Config } from 'pokey-common';
@@ -22,7 +22,7 @@ describe('config-disable handler', () => {
       id: 'c1',
       name: 'test',
       schemaId: 's1',
-      status: ConfigStatus.Active,
+      status: ConfigStatus.ACTIVE,
       configData: {},
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
@@ -32,6 +32,6 @@ describe('config-disable handler', () => {
     const res = await handler({ pathParameters: { id: 'c1' }, queryParameters: {}, body: undefined });
     expect(res.statusCode).toBe(200);
     const body = res.body as Record<string, unknown>;
-    expect(body['status']).toBe(ConfigStatus.Disabled);
+    expect(body['status']).toBe(ConfigStatus.DISABLED);
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createConfigCreateHandler } from '../../../handlers/configs/create';
+import { createConfigCreateHandler } from '../../../handlers/config-handlers/create';
 import { createMockDependencies, type MockDependencies } from '../../helpers/mock-dependencies';
 import { SchemaStatus, ConfigStatus } from 'pokey-common';
 import type { Schema } from 'pokey-common';
@@ -7,7 +7,7 @@ import type { Schema } from 'pokey-common';
 const activeSchema: Schema = {
   id: 's1',
   name: 'test-schema',
-  status: SchemaStatus.Active,
+  status: SchemaStatus.ACTIVE,
   schemaData: { type: 'object', properties: { a: { type: 'string' } }, required: ['a'], additionalProperties: true },
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
@@ -37,7 +37,7 @@ describe('config-create handler', () => {
   });
 
   it('returns 400 when schema is disabled', async () => {
-    deps.dataLayer.get.mockResolvedValue({ ...activeSchema, status: SchemaStatus.Disabled });
+    deps.dataLayer.get.mockResolvedValue({ ...activeSchema, status: SchemaStatus.DISABLED });
     const handler = createConfigCreateHandler(deps);
     const res = await handler({
       pathParameters: {},
@@ -78,7 +78,7 @@ describe('config-create handler', () => {
     expect(res.statusCode).toBe(200);
     const body = res.body as Record<string, unknown>;
     expect(body['name']).toBe('myconfig');
-    expect(body['status']).toBe(ConfigStatus.Active);
+    expect(body['status']).toBe(ConfigStatus.ACTIVE);
     expect(deps.dataLayer.put).toHaveBeenCalled();
   });
 });

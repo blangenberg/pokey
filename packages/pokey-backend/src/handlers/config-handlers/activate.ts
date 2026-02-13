@@ -5,18 +5,18 @@ import type { HandlerDependencies, Handler } from '../../adapters/types';
 
 export function createConfigActivateHandler(deps: HandlerDependencies): Handler {
   return async (request) => {
-    const endTimer = deps.observability.startTimer(MetricEvent.ConfigActivate);
+    const endTimer = deps.observability.startTimer(MetricEvent.CONFIG_ACTIVATE);
     try {
-      deps.observability.trackEvent(MetricEvent.ConfigActivate);
+      deps.observability.trackEvent(MetricEvent.CONFIG_ACTIVATE);
 
       const id = request.pathParameters['id'];
       if (!id) {
-        return { statusCode: 400, body: { error: 'Missing path parameter: id', code: ErrorCode.BadRequest } };
+        return { statusCode: 400, body: { error: 'Missing path parameter: id', code: ErrorCode.BAD_REQUEST } };
       }
 
       const existing = await deps.dataLayer.get<Config>(CONFIGURATIONS_TABLE, { id });
       if (!existing) {
-        return { statusCode: 404, body: { error: 'Configuration not found', code: ErrorCode.ConfigNotFound } };
+        return { statusCode: 404, body: { error: 'Configuration not found', code: ErrorCode.CONFIG_NOT_FOUND } };
       }
 
       const now = deps.dateTime.now();
@@ -25,16 +25,16 @@ export function createConfigActivateHandler(deps: HandlerDependencies): Handler 
         CONFIGURATIONS_TABLE,
         { id },
         {
-          status: ConfigStatus.Active,
+          status: ConfigStatus.ACTIVE,
           updatedAt: now,
         },
       );
 
-      const updated: Config = { ...existing, status: ConfigStatus.Active, updatedAt: now };
+      const updated: Config = { ...existing, status: ConfigStatus.ACTIVE, updatedAt: now };
       return { statusCode: 200, body: updated };
     } catch (error: unknown) {
-      deps.observability.logError({ message: 'Failed to activate config', code: ErrorCode.InternalError, details: error });
-      return { statusCode: 500, body: { error: 'Internal server error', code: ErrorCode.InternalError } };
+      deps.observability.logError({ message: 'Failed to activate config', code: ErrorCode.INTERNAL_ERROR, details: error });
+      return { statusCode: 500, body: { error: 'Internal server error', code: ErrorCode.INTERNAL_ERROR } };
     } finally {
       endTimer();
     }

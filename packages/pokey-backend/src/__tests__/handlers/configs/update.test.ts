@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createConfigUpdateHandler } from '../../../handlers/configs/update';
+import { createConfigUpdateHandler } from '../../../handlers/config-handlers/update';
 import { createMockDependencies, type MockDependencies } from '../../helpers/mock-dependencies';
 import { SchemaStatus, ConfigStatus } from 'pokey-common';
 import type { Schema, Config } from 'pokey-common';
@@ -7,7 +7,7 @@ import type { Schema, Config } from 'pokey-common';
 const activeSchema: Schema = {
   id: 's1',
   name: 'test-schema',
-  status: SchemaStatus.Active,
+  status: SchemaStatus.ACTIVE,
   schemaData: { type: 'object', properties: { a: { type: 'string' } }, required: ['a'], additionalProperties: true },
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
@@ -16,7 +16,7 @@ const existingConfig: Config = {
   id: 'c1',
   name: 'existing',
   schemaId: 's1',
-  status: ConfigStatus.Active,
+  status: ConfigStatus.ACTIVE,
   configData: { a: 'old' },
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',

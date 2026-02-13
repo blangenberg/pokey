@@ -3,20 +3,20 @@ import { expressAdapter } from '../adapters/express-adapter';
 import type { HandlerDependencies } from '../adapters/types';
 
 // Schema handlers
-import { createSchemaGetHandler } from '../handlers/schemas/get';
-import { createSchemaListHandler } from '../handlers/schemas/list';
-import { createSchemaCreateHandler } from '../handlers/schemas/create';
-import { createSchemaUpdateHandler } from '../handlers/schemas/update';
-import { createSchemaDisableHandler } from '../handlers/schemas/disable';
-import { createSchemaActivateHandler } from '../handlers/schemas/activate';
+import { createSchemaGetHandler } from '../handlers/schema-handlers/get';
+import { createSchemaListHandler } from '../handlers/schema-handlers/list';
+import { createSchemaCreateHandler } from '../handlers/schema-handlers/create';
+import { createSchemaUpdateHandler } from '../handlers/schema-handlers/update';
+import { createSchemaDisableHandler } from '../handlers/schema-handlers/disable';
+import { createSchemaActivateHandler } from '../handlers/schema-handlers/activate';
 
 // Config handlers
-import { createConfigGetHandler } from '../handlers/configs/get';
-import { createConfigListHandler } from '../handlers/configs/list';
-import { createConfigCreateHandler } from '../handlers/configs/create';
-import { createConfigUpdateHandler } from '../handlers/configs/update';
-import { createConfigDisableHandler } from '../handlers/configs/disable';
-import { createConfigActivateHandler } from '../handlers/configs/activate';
+import { createConfigGetHandler } from '../handlers/config-handlers/get';
+import { createConfigListHandler } from '../handlers/config-handlers/list';
+import { createConfigCreateHandler } from '../handlers/config-handlers/create';
+import { createConfigUpdateHandler } from '../handlers/config-handlers/update';
+import { createConfigDisableHandler } from '../handlers/config-handlers/disable';
+import { createConfigActivateHandler } from '../handlers/config-handlers/activate';
 
 export function createRouter(deps: HandlerDependencies): Router {
   const router = Router();

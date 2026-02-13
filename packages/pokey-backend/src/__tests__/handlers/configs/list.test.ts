@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createConfigListHandler } from '../../../handlers/configs/list';
+import { createConfigListHandler } from '../../../handlers/config-handlers/list';
 import { createMockDependencies, type MockDependencies } from '../../helpers/mock-dependencies';
 
 describe('config-list handler', () => {

@@ -6,56 +6,52 @@ import type { HandlerDependencies, Handler } from '../../adapters/types';
 
 export function createConfigUpdateHandler(deps: HandlerDependencies): Handler {
   return async (request) => {
-    const endTimer = deps.observability.startTimer(MetricEvent.ConfigUpdate);
+    const endTimer = deps.observability.startTimer(MetricEvent.CONFIG_UPDATE);
     try {
-      deps.observability.trackEvent(MetricEvent.ConfigUpdate);
+      deps.observability.trackEvent(MetricEvent.CONFIG_UPDATE);
 
       const id = request.pathParameters['id'];
       if (!id) {
-        return { statusCode: 400, body: { error: 'Missing path parameter: id', code: ErrorCode.BadRequest } };
+        return { statusCode: 400, body: { error: 'Missing path parameter: id', code: ErrorCode.BAD_REQUEST } };
       }
 
       const body = request.body as Partial<UpdateConfigRequest> | undefined;
       if (!body?.schemaId || !body.configData) {
         return {
           statusCode: 400,
-          body: { error: 'Missing required fields: schemaId, configData', code: ErrorCode.BadRequest },
+          body: { error: 'Missing required fields: schemaId, configData', code: ErrorCode.BAD_REQUEST },
         };
       }
 
-      // Retrieve existing config
       const existing = await deps.dataLayer.get<Config>(CONFIGURATIONS_TABLE, { id });
       if (!existing) {
-        return { statusCode: 404, body: { error: 'Configuration not found', code: ErrorCode.ConfigNotFound } };
+        return { statusCode: 404, body: { error: 'Configuration not found', code: ErrorCode.CONFIG_NOT_FOUND } };
       }
 
-      // Fetch and validate the schema (may be a different schema if schemaId changed)
       const schema = await deps.dataLayer.get<Schema>(SCHEMAS_TABLE, { id: body.schemaId });
       if (!schema) {
-        return { statusCode: 404, body: { error: 'Schema not found', code: ErrorCode.SchemaNotFound } };
+        return { statusCode: 404, body: { error: 'Schema not found', code: ErrorCode.SCHEMA_NOT_FOUND } };
       }
-      if (schema.status !== SchemaStatus.Active) {
-        return { statusCode: 400, body: { error: 'Schema is not active', code: ErrorCode.SchemaDisabled } };
+      if (schema.status !== SchemaStatus.ACTIVE) {
+        return { statusCode: 400, body: { error: 'Schema is not active', code: ErrorCode.SCHEMA_DISABLED } };
       }
 
-      // Validate configData against the schema
       const ajv = new Ajv({ allErrors: true });
       let validate: ReturnType<Ajv['compile']>;
       try {
         validate = ajv.compile(schema.schemaData);
       } catch {
-        deps.observability.logError({ message: 'Stored schema cannot be compiled', code: ErrorCode.SchemaInvalid });
-        return { statusCode: 422, body: { error: 'Stored schema is malformed', code: ErrorCode.SchemaInvalid } };
+        deps.observability.logError({ message: 'Stored schema cannot be compiled', code: ErrorCode.SCHEMA_INVALID });
+        return { statusCode: 422, body: { error: 'Stored schema is malformed', code: ErrorCode.SCHEMA_INVALID } };
       }
 
       if (!validate(body.configData)) {
         return {
           statusCode: 406,
-          body: { error: 'configData does not conform to the schema', code: ErrorCode.ConfigDataInvalid, details: validate.errors },
+          body: { error: 'configData does not conform to the schema', code: ErrorCode.CONFIG_DATA_INVALID, details: validate.errors },
         };
       }
 
-      // Handle optional name change
       const newName = body.name !== undefined ? body.name.toLowerCase() : existing.name;
       if (newName !== existing.name) {
         const nameCheck = await deps.dataLayer.query<Config>({
@@ -69,7 +65,7 @@ export function createConfigUpdateHandler(deps: HandlerDependencies): Handler {
         if (nameCheck.items.length > 0) {
           return {
             statusCode: 409,
-            body: { error: 'A configuration with this name already exists', code: ErrorCode.ConfigNameConflict },
+            body: { error: 'A configuration with this name already exists', code: ErrorCode.CONFIG_NAME_CONFLICT },
           };
         }
       }
@@ -97,8 +93,8 @@ export function createConfigUpdateHandler(deps: HandlerDependencies): Handler {
 
       return { statusCode: 200, body: updated };
     } catch (error: unknown) {
-      deps.observability.logError({ message: 'Failed to update config', code: ErrorCode.InternalError, details: error });
-      return { statusCode: 500, body: { error: 'Internal server error', code: ErrorCode.InternalError } };
+      deps.observability.logError({ message: 'Failed to update config', code: ErrorCode.INTERNAL_ERROR, details: error });
+      return { statusCode: 500, body: { error: 'Internal server error', code: ErrorCode.INTERNAL_ERROR } };
     } finally {
       endTimer();
     }

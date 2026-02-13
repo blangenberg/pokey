@@ -1,9 +1,9 @@
 export enum SchemaStatus {
-  Active = 'active',
-  Disabled = 'disabled',
+  ACTIVE = 'active',
+  DISABLED = 'disabled',
 }
 
 export enum ConfigStatus {
-  Active = 'active',
-  Disabled = 'disabled',
+  ACTIVE = 'active',
+  DISABLED = 'disabled',
 }

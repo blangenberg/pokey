@@ -1,20 +1,20 @@
 import { ErrorCode, MetricEvent, ConfigStatus } from 'pokey-common';
 import type { ConfigListItem } from 'pokey-common';
 import { CONFIGURATIONS_TABLE, MAX_PAGE_LIMIT } from '../../constants';
-import { decodeNextToken, encodeNextToken } from '../../helpers/pagination';
+import { decodeNextToken, encodeNextToken } from '../../utils/pagination';
 import type { HandlerDependencies, Handler } from '../../adapters/types';
 
 const LIST_PROJECTION = 'id, #n, schemaId, #s, createdAt, updatedAt';
 
 export function createConfigListHandler(deps: HandlerDependencies): Handler {
   return async (request) => {
-    const endTimer = deps.observability.startTimer(MetricEvent.ConfigList);
+    const endTimer = deps.observability.startTimer(MetricEvent.CONFIG_LIST);
     try {
-      deps.observability.trackEvent(MetricEvent.ConfigList);
+      deps.observability.trackEvent(MetricEvent.CONFIG_LIST);
 
       const schemaId = request.queryParameters['schemaId'];
       if (!schemaId) {
-        return { statusCode: 400, body: { error: 'Missing required query parameter: schemaId', code: ErrorCode.BadRequest } };
+        return { statusCode: 400, body: { error: 'Missing required query parameter: schemaId', code: ErrorCode.BAD_REQUEST } };
       }
 
       const rawLimit = Number(request.queryParameters['limit'] ?? '20');
@@ -24,10 +24,9 @@ export function createConfigListHandler(deps: HandlerDependencies): Handler {
       const exclusiveStartKey = decodeNextToken(nextToken);
 
       if (statusFilter && !Object.values(ConfigStatus).includes(statusFilter)) {
-        return { statusCode: 400, body: { error: 'Invalid status filter', code: ErrorCode.BadRequest } };
+        return { statusCode: 400, body: { error: 'Invalid status filter', code: ErrorCode.BAD_REQUEST } };
       }
 
-      // Query by schemaId using GSI, optionally filter by status
       const expressionAttributeNames: Record<string, string> = { '#n': 'name', '#s': 'status' };
       const expressionAttributeValues: Record<string, unknown> = { ':schemaId': schemaId };
       let filterExpression: string | undefined;
@@ -57,8 +56,8 @@ export function createConfigListHandler(deps: HandlerDependencies): Handler {
         },
       };
     } catch (error: unknown) {
-      deps.observability.logError({ message: 'Failed to list configs', code: ErrorCode.InternalError, details: error });
-      return { statusCode: 500, body: { error: 'Internal server error', code: ErrorCode.InternalError } };
+      deps.observability.logError({ message: 'Failed to list configs', code: ErrorCode.INTERNAL_ERROR, details: error });
+      return { statusCode: 500, body: { error: 'Internal server error', code: ErrorCode.INTERNAL_ERROR } };
     } finally {
       endTimer();
     }

@@ -23,7 +23,7 @@ Pokey is a schema-driven configuration system. It is a TypeScript monorepo with 
 ### Backend
 
 - **Adapter pattern**: Every handler is a pure function `(HandlerRequest) => Promise<HandlerResponse>`. Thin adapters convert between Lambda events / Express requests and this common shape. Never duplicate handler logic across adapters.
-- **Constructor dependency injection**: The `DataLayer`, `Observability`, `DateTimeHelper`, and `UuidHelper` are injected via `HandlerDependencies`. Never instantiate classes statically at module scope — it breaks testability.
+- **Constructor dependency injection**: The `DataLayer`, `Observability`, `DateTimeUtil`, and `UuidUtil` are injected via `HandlerDependencies`. Never instantiate classes statically at module scope — it breaks testability.
 - **Observability in every handler**: Each handler must call `trackEvent`, `startTimer`, and handle errors via `logError`. Use the `MetricEvent` and `ErrorCode` enums from `pokey-common`.
 - **Ajv validation**: `additionalProperties` must always be `true` on stored schemas. Use `ensureAdditionalProperties()` when saving.
 - **Backward-compatibility on schema update**: Use `checkSchemaCompatibility()`. Adding optional properties is safe; removing required properties or changing types is not.
@@ -48,6 +48,7 @@ Pokey is a schema-driven configuration system. It is a TypeScript monorepo with 
 
 ## Coding Style
 
+- **SCREAMING_SNAKE_CASE** for all TypeScript enum members. Values have no defined style. Example: `SchemaStatus.ACTIVE = 'active'`, `ErrorCode.SCHEMA_NOT_FOUND = 'SCHEMA_NOT_FOUND'`.
 - **camelCase** for variables, functions, and file names.
 - **Prettier** with 140 character width. Config is in `.prettierrc`.
 - **ESLint** with `typescript-eslint` strict type-checked config. Config is in `eslint.config.mjs`.
@@ -75,18 +76,19 @@ Pokey is a schema-driven configuration system. It is a TypeScript monorepo with 
 
 ```
 packages/pokey-backend/src/
-  abstractions/     – DataLayer, Observability, DateTimeHelper, UuidHelper
-  adapters/         – lambda-adapter, express-adapter, shared types
+  adapters/              – lambda-adapter, express-adapter, shared types
   handlers/
-    schemas/        – get, list, create, update, disable, activate
-    configs/        – get, list, create, update, disable, activate
-  helpers/          – schema-compatibility, pagination, ensure-additional-properties
-  lambda/           – Lambda entry points (thin wiring, not tested directly)
-  routes/           – Express route registration
-  tables/           – DynamoDB table setup script
-  constants.ts      – Table names, region, limits
-  dependencies.ts   – Factory for HandlerDependencies
-  index.ts          – Express dev server entry point
+    schema-handlers/     – get, list, create, update, disable, activate
+    config-handlers/     – get, list, create, update, disable, activate
+  lambda/                – Lambda entry points (thin wiring, not tested directly)
+  routes/                – Express route registration
+  utils/                 – DateTimeUtil, UuidUtil, handler-dependency-util, pagination, schema-compatibility, ensure-additional-properties
+  constants.ts           – Table names, region, limits
+  data-layer.ts          – DataLayer (DynamoDB abstraction)
+  observability.ts       – Observability (metrics, error logging)
+  index.ts               – Express dev server entry point
+
+scripts/                 - initialization scripts for node, podman, and DynamoDB
 ```
 
 ## Do Not Modify

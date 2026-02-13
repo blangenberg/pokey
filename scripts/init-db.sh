@@ -10,6 +10,6 @@ echo "    Waiting for DynamoDB Local to be ready..."
 sleep 2
 
 echo "==> Creating tables..."
-npx tsx packages/pokey-backend/src/tables/setup.ts
+npx tsx scripts/init-db-schema.ts
 
 echo "==> Database initialization complete."

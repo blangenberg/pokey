@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkSchemaCompatibility } from '../../helpers/schema-compatibility';
+import { checkSchemaCompatibility } from '../../utils/schema-compatibility';
 
 describe('checkSchemaCompatibility', () => {
   it('returns no issues when schemas are identical', () => {

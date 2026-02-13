@@ -5,18 +5,18 @@ import type { HandlerDependencies, Handler } from '../../adapters/types';
 
 export function createConfigDisableHandler(deps: HandlerDependencies): Handler {
   return async (request) => {
-    const endTimer = deps.observability.startTimer(MetricEvent.ConfigDisable);
+    const endTimer = deps.observability.startTimer(MetricEvent.CONFIG_DISABLE);
     try {
-      deps.observability.trackEvent(MetricEvent.ConfigDisable);
+      deps.observability.trackEvent(MetricEvent.CONFIG_DISABLE);
 
       const id = request.pathParameters['id'];
       if (!id) {
-        return { statusCode: 400, body: { error: 'Missing path parameter: id', code: ErrorCode.BadRequest } };
+        return { statusCode: 400, body: { error: 'Missing path parameter: id', code: ErrorCode.BAD_REQUEST } };
       }
 
       const existing = await deps.dataLayer.get<Config>(CONFIGURATIONS_TABLE, { id });
       if (!existing) {
-        return { statusCode: 404, body: { error: 'Configuration not found', code: ErrorCode.ConfigNotFound } };
+        return { statusCode: 404, body: { error: 'Configuration not found', code: ErrorCode.CONFIG_NOT_FOUND } };
       }
 
       const now = deps.dateTime.now();
@@ -25,16 +25,16 @@ export function createConfigDisableHandler(deps: HandlerDependencies): Handler {
         CONFIGURATIONS_TABLE,
         { id },
         {
-          status: ConfigStatus.Disabled,
+          status: ConfigStatus.DISABLED,
           updatedAt: now,
         },
       );
 
-      const updated: Config = { ...existing, status: ConfigStatus.Disabled, updatedAt: now };
+      const updated: Config = { ...existing, status: ConfigStatus.DISABLED, updatedAt: now };
       return { statusCode: 200, body: updated };
     } catch (error: unknown) {
-      deps.observability.logError({ message: 'Failed to disable config', code: ErrorCode.InternalError, details: error });
-      return { statusCode: 500, body: { error: 'Internal server error', code: ErrorCode.InternalError } };
+      deps.observability.logError({ message: 'Failed to disable config', code: ErrorCode.INTERNAL_ERROR, details: error });
+      return { statusCode: 500, body: { error: 'Internal server error', code: ErrorCode.INTERNAL_ERROR } };
     } finally {
       endTimer();
     }

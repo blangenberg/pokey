@@ -6,47 +6,44 @@ import type { HandlerDependencies, Handler } from '../../adapters/types';
 
 export function createConfigCreateHandler(deps: HandlerDependencies): Handler {
   return async (request) => {
-    const endTimer = deps.observability.startTimer(MetricEvent.ConfigCreate);
+    const endTimer = deps.observability.startTimer(MetricEvent.CONFIG_CREATE);
     try {
-      deps.observability.trackEvent(MetricEvent.ConfigCreate);
+      deps.observability.trackEvent(MetricEvent.CONFIG_CREATE);
 
       const body = request.body as Partial<CreateConfigRequest> | undefined;
       if (!body?.name || !body.schemaId || !body.configData) {
         return {
           statusCode: 400,
-          body: { error: 'Missing required fields: name, schemaId, configData', code: ErrorCode.BadRequest },
+          body: { error: 'Missing required fields: name, schemaId, configData', code: ErrorCode.BAD_REQUEST },
         };
       }
 
       const name = body.name.toLowerCase();
 
-      // Fetch and validate schema
       const schema = await deps.dataLayer.get<Schema>(SCHEMAS_TABLE, { id: body.schemaId });
       if (!schema) {
-        return { statusCode: 404, body: { error: 'Schema not found', code: ErrorCode.SchemaNotFound } };
+        return { statusCode: 404, body: { error: 'Schema not found', code: ErrorCode.SCHEMA_NOT_FOUND } };
       }
-      if (schema.status !== SchemaStatus.Active) {
-        return { statusCode: 400, body: { error: 'Schema is not active', code: ErrorCode.SchemaDisabled } };
+      if (schema.status !== SchemaStatus.ACTIVE) {
+        return { statusCode: 400, body: { error: 'Schema is not active', code: ErrorCode.SCHEMA_DISABLED } };
       }
 
-      // Validate configData against the schema
       const ajv = new Ajv({ allErrors: true });
       let validate: ReturnType<Ajv['compile']>;
       try {
         validate = ajv.compile(schema.schemaData);
       } catch {
-        deps.observability.logError({ message: 'Stored schema cannot be compiled', code: ErrorCode.SchemaInvalid });
-        return { statusCode: 422, body: { error: 'Stored schema is malformed', code: ErrorCode.SchemaInvalid } };
+        deps.observability.logError({ message: 'Stored schema cannot be compiled', code: ErrorCode.SCHEMA_INVALID });
+        return { statusCode: 422, body: { error: 'Stored schema is malformed', code: ErrorCode.SCHEMA_INVALID } };
       }
 
       if (!validate(body.configData)) {
         return {
           statusCode: 406,
-          body: { error: 'configData does not conform to the schema', code: ErrorCode.ConfigDataInvalid, details: validate.errors },
+          body: { error: 'configData does not conform to the schema', code: ErrorCode.CONFIG_DATA_INVALID, details: validate.errors },
         };
       }
 
-      // Check for name conflict
       const existing = await deps.dataLayer.query<Config>({
         tableName: CONFIGURATIONS_TABLE,
         indexName: 'configs-name-index',
@@ -56,7 +53,7 @@ export function createConfigCreateHandler(deps: HandlerDependencies): Handler {
       });
 
       if (existing.items.length > 0) {
-        return { statusCode: 409, body: { error: 'A configuration with this name already exists', code: ErrorCode.ConfigNameConflict } };
+        return { statusCode: 409, body: { error: 'A configuration with this name already exists', code: ErrorCode.CONFIG_NAME_CONFLICT } };
       }
 
       const now = deps.dateTime.now();
@@ -66,7 +63,7 @@ export function createConfigCreateHandler(deps: HandlerDependencies): Handler {
         id,
         name,
         schemaId: body.schemaId,
-        status: ConfigStatus.Active,
+        status: ConfigStatus.ACTIVE,
         configData: body.configData,
         createdAt: now,
         updatedAt: now,
@@ -76,8 +73,8 @@ export function createConfigCreateHandler(deps: HandlerDependencies): Handler {
 
       return { statusCode: 200, body: config };
     } catch (error: unknown) {
-      deps.observability.logError({ message: 'Failed to create config', code: ErrorCode.InternalError, details: error });
-      return { statusCode: 500, body: { error: 'Internal server error', code: ErrorCode.InternalError } };
+      deps.observability.logError({ message: 'Failed to create config', code: ErrorCode.INTERNAL_ERROR, details: error });
+      return { statusCode: 500, body: { error: 'Internal server error', code: ErrorCode.INTERNAL_ERROR } };
     } finally {
       endTimer();
     }

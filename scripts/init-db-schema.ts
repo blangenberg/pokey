@@ -1,5 +1,5 @@
 import { DynamoDBClient, CreateTableCommand, ListTablesCommand, type CreateTableCommandInput } from '@aws-sdk/client-dynamodb';
-import { LOCAL_DYNAMODB_ENDPOINT, DEFAULT_REGION, SCHEMAS_TABLE, CONFIGURATIONS_TABLE } from '../constants';
+import { LOCAL_DYNAMODB_ENDPOINT, DEFAULT_REGION, SCHEMAS_TABLE, CONFIGURATIONS_TABLE } from '../packages/pokey-backend/src/constants';
 
 const schemasTableDef: CreateTableCommandInput = {
   TableName: SCHEMAS_TABLE,
@@ -76,7 +76,7 @@ export async function setupTables(): Promise<void> {
 }
 
 // Allow running as a standalone script
-const isMainModule = process.argv[1]?.includes('setup');
+const isMainModule = process.argv[1]?.includes('init-db-schema');
 if (isMainModule) {
   setupTables().catch((err: unknown) => {
     console.error('Failed to set up tables:', err);

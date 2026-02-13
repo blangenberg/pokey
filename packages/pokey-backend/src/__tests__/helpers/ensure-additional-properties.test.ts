@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ensureAdditionalProperties } from '../../helpers/ensure-additional-properties';
+import { ensureAdditionalProperties } from '../../utils/ensure-additional-properties';
 
 describe('ensureAdditionalProperties', () => {
   it('adds additionalProperties: true to a flat schema', () => {

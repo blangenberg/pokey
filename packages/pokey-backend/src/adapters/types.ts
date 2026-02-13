@@ -1,7 +1,7 @@
-import type { DataLayer } from '../abstractions/data-layer';
-import type { Observability } from '../abstractions/observability';
-import type { DateTimeHelper } from '../abstractions/datetime-helper';
-import type { UuidHelper } from '../abstractions/uuid-helper';
+import type { DataLayer } from '../data-layer';
+import type { Observability } from '../observability';
+import type { DateTimeUtil } from '../utils/datetime-util';
+import type { UuidUtil } from '../utils/uuid-util';
 
 export interface HandlerRequest {
   pathParameters: Record<string, string | undefined>;
@@ -19,8 +19,8 @@ export type Handler = (request: HandlerRequest) => Promise<HandlerResponse>;
 export interface HandlerDependencies {
   dataLayer: DataLayer;
   observability: Observability;
-  dateTime: DateTimeHelper;
-  uuid: UuidHelper;
+  dateTime: DateTimeUtil;
+  uuid: UuidUtil;
 }
 
 export type HandlerFactory = (deps: HandlerDependencies) => Handler;

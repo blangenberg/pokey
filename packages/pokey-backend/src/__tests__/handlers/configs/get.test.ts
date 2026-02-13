@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createConfigGetHandler } from '../../../handlers/configs/get';
+import { createConfigGetHandler } from '../../../handlers/config-handlers/get';
 import { createMockDependencies, type MockDependencies } from '../../helpers/mock-dependencies';
 import { ConfigStatus } from 'pokey-common';
 import type { Config } from 'pokey-common';
@@ -8,7 +8,7 @@ const activeConfig: Config = {
   id: 'c1',
   name: 'test-config',
   schemaId: 's1',
-  status: ConfigStatus.Active,
+  status: ConfigStatus.ACTIVE,
   configData: { a: 'hello' },
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
@@ -34,14 +34,14 @@ describe('config-get handler', () => {
   });
 
   it('returns 404 for disabled config when includeDisabled is false', async () => {
-    deps.dataLayer.get.mockResolvedValue({ ...activeConfig, status: ConfigStatus.Disabled });
+    deps.dataLayer.get.mockResolvedValue({ ...activeConfig, status: ConfigStatus.DISABLED });
     const handler = createConfigGetHandler(deps);
     const res = await handler({ pathParameters: { id: 'c1' }, queryParameters: {}, body: undefined });
     expect(res.statusCode).toBe(404);
   });
 
   it('returns disabled config when includeDisabled is true', async () => {
-    const disabled = { ...activeConfig, status: ConfigStatus.Disabled };
+    const disabled = { ...activeConfig, status: ConfigStatus.DISABLED };
     deps.dataLayer.get.mockResolvedValue(disabled);
     const handler = createConfigGetHandler(deps);
     const res = await handler({ pathParameters: { id: 'c1' }, queryParameters: { includeDisabled: 'true' }, body: undefined });

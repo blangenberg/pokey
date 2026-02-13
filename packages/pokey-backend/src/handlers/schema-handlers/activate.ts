@@ -5,18 +5,18 @@ import type { HandlerDependencies, Handler } from '../../adapters/types';
 
 export function createSchemaActivateHandler(deps: HandlerDependencies): Handler {
   return async (request) => {
-    const endTimer = deps.observability.startTimer(MetricEvent.SchemaActivate);
+    const endTimer = deps.observability.startTimer(MetricEvent.SCHEMA_ACTIVATE);
     try {
-      deps.observability.trackEvent(MetricEvent.SchemaActivate);
+      deps.observability.trackEvent(MetricEvent.SCHEMA_ACTIVATE);
 
       const id = request.pathParameters['id'];
       if (!id) {
-        return { statusCode: 400, body: { error: 'Missing path parameter: id', code: ErrorCode.BadRequest } };
+        return { statusCode: 400, body: { error: 'Missing path parameter: id', code: ErrorCode.BAD_REQUEST } };
       }
 
       const existing = await deps.dataLayer.get<Schema>(SCHEMAS_TABLE, { id });
       if (!existing) {
-        return { statusCode: 404, body: { error: 'Schema not found', code: ErrorCode.SchemaNotFound } };
+        return { statusCode: 404, body: { error: 'Schema not found', code: ErrorCode.SCHEMA_NOT_FOUND } };
       }
 
       const now = deps.dateTime.now();
@@ -25,16 +25,16 @@ export function createSchemaActivateHandler(deps: HandlerDependencies): Handler 
         SCHEMAS_TABLE,
         { id },
         {
-          status: SchemaStatus.Active,
+          status: SchemaStatus.ACTIVE,
           updatedAt: now,
         },
       );
 
-      const updated: Schema = { ...existing, status: SchemaStatus.Active, updatedAt: now };
+      const updated: Schema = { ...existing, status: SchemaStatus.ACTIVE, updatedAt: now };
       return { statusCode: 200, body: updated };
     } catch (error: unknown) {
-      deps.observability.logError({ message: 'Failed to activate schema', code: ErrorCode.InternalError, details: error });
-      return { statusCode: 500, body: { error: 'Internal server error', code: ErrorCode.InternalError } };
+      deps.observability.logError({ message: 'Failed to activate schema', code: ErrorCode.INTERNAL_ERROR, details: error });
+      return { statusCode: 500, body: { error: 'Internal server error', code: ErrorCode.INTERNAL_ERROR } };
     } finally {
       endTimer();
     }

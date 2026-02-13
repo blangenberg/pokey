@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createSchemaGetHandler } from '../../../handlers/schemas/get';
+import { createSchemaGetHandler } from '../../../handlers/schema-handlers/get';
 import { createMockDependencies, type MockDependencies } from '../../helpers/mock-dependencies';
 import { SchemaStatus } from 'pokey-common';
 
@@ -27,7 +27,7 @@ describe('schema-get handler', () => {
     const schema = {
       id: 's1',
       name: 'test',
-      status: SchemaStatus.Active,
+      status: SchemaStatus.ACTIVE,
       schemaData: {},
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',

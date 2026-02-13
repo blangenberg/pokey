@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createSchemaUpdateHandler } from '../../../handlers/schemas/update';
+import { createSchemaUpdateHandler } from '../../../handlers/schema-handlers/update';
 import { createMockDependencies, type MockDependencies } from '../../helpers/mock-dependencies';
 import { SchemaStatus } from 'pokey-common';
 import type { Schema } from 'pokey-common';
@@ -7,7 +7,7 @@ import type { Schema } from 'pokey-common';
 const existingSchema: Schema = {
   id: 's1',
   name: 'existing',
-  status: SchemaStatus.Active,
+  status: SchemaStatus.ACTIVE,
   schemaData: { type: 'object', properties: { a: { type: 'string' } }, required: ['a'], additionalProperties: true },
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',

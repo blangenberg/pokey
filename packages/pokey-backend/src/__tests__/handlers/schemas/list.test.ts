@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createSchemaListHandler } from '../../../handlers/schemas/list';
+import { createSchemaListHandler } from '../../../handlers/schema-handlers/list';
 import { createMockDependencies, type MockDependencies } from '../../helpers/mock-dependencies';
 
 describe('schema-list handler', () => {

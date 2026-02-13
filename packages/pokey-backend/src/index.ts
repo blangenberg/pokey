@@ -1,6 +1,6 @@
 import express from 'express';
 import { createRouter } from './routes/index';
-import { createDependencies } from './dependencies';
+import { createDependencies } from './utils/handler-dependency-util';
 
 const PORT = Number(process.env['PORT'] ?? '3001');
 

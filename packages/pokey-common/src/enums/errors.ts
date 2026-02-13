@@ -1,35 +1,35 @@
 export enum ErrorCode {
   // Schema errors
-  SchemaNotFound = 'SCHEMA_NOT_FOUND',
-  SchemaNameConflict = 'SCHEMA_NAME_CONFLICT',
-  SchemaInvalid = 'SCHEMA_INVALID',
-  SchemaIncompatible = 'SCHEMA_INCOMPATIBLE',
-  SchemaDisabled = 'SCHEMA_DISABLED',
+  SCHEMA_NOT_FOUND = 'schema_not_found',
+  SCHEMA_NAME_CONFLICT = 'schema_name_conflict',
+  SCHEMA_INVALID = 'schema_invalid',
+  SCHEMA_INCOMPATIBLE = 'schema_incompatible',
+  SCHEMA_DISABLED = 'schema_disabled',
 
   // Config errors
-  ConfigNotFound = 'CONFIG_NOT_FOUND',
-  ConfigNameConflict = 'CONFIG_NAME_CONFLICT',
-  ConfigDataInvalid = 'CONFIG_DATA_INVALID',
+  CONFIG_NOT_FOUND = 'config_not_found',
+  CONFIG_NAME_CONFLICT = 'config_name_conflict',
+  CONFIG_DATA_INVALID = 'config_data_invalid',
 
   // General errors
-  BadRequest = 'BAD_REQUEST',
-  InternalError = 'INTERNAL_ERROR',
+  BAD_REQUEST = 'bad_request',
+  INTERNAL_ERROR = 'internal_error',
 }
 
 export enum MetricEvent {
   // Schema events
-  SchemaGet = 'schema_get',
-  SchemaList = 'schema_list',
-  SchemaCreate = 'schema_create',
-  SchemaUpdate = 'schema_update',
-  SchemaDisable = 'schema_disable',
-  SchemaActivate = 'schema_activate',
+  SCHEMA_GET = 'schema_get',
+  SCHEMA_LIST = 'schema_list',
+  SCHEMA_CREATE = 'schema_create',
+  SCHEMA_UPDATE = 'schema_update',
+  SCHEMA_DISABLE = 'schema_disable',
+  SCHEMA_ACTIVATE = 'schema_activate',
 
   // Config events
-  ConfigGet = 'config_get',
-  ConfigList = 'config_list',
-  ConfigCreate = 'config_create',
-  ConfigUpdate = 'config_update',
-  ConfigDisable = 'config_disable',
-  ConfigActivate = 'config_activate',
+  CONFIG_GET = 'config_get',
+  CONFIG_LIST = 'config_list',
+  CONFIG_CREATE = 'config_create',
+  CONFIG_UPDATE = 'config_update',
+  CONFIG_DISABLE = 'config_disable',
+  CONFIG_ACTIVATE = 'config_activate',
 }

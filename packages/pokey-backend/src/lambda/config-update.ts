@@ -1,6 +1,6 @@
-import { createConfigUpdateHandler } from '../handlers/configs/update';
+import { createConfigUpdateHandler } from '../handlers/config-handlers/update';
 import { lambdaAdapter } from '../adapters/lambda-adapter';
-import { createDependencies } from '../dependencies';
+import { createDependencies } from '../utils/handler-dependency-util';
 
 const deps = createDependencies();
 export const handler = lambdaAdapter(createConfigUpdateHandler(deps));

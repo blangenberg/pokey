@@ -1,9 +1,9 @@
 import { vi } from 'vitest';
 import type { HandlerDependencies } from '../../adapters/types';
-import type { DataLayer } from '../../abstractions/data-layer';
-import type { Observability } from '../../abstractions/observability';
-import type { DateTimeHelper } from '../../abstractions/datetime-helper';
-import type { UuidHelper } from '../../abstractions/uuid-helper';
+import type { DataLayer } from '../../data-layer';
+import type { Observability } from '../../observability';
+import type { DateTimeUtil } from '../../utils/datetime-util';
+import type { UuidUtil } from '../../utils/uuid-util';
 
 export interface MockDependencies extends HandlerDependencies {
   dataLayer: {
@@ -21,8 +21,8 @@ export interface MockDependencies extends HandlerDependencies {
     logError: ReturnType<typeof vi.fn>;
     getRegistry: ReturnType<typeof vi.fn>;
   } & Observability;
-  dateTime: { now: ReturnType<typeof vi.fn> } & DateTimeHelper;
-  uuid: { generate: ReturnType<typeof vi.fn> } & UuidHelper;
+  dateTime: { now: ReturnType<typeof vi.fn> } & DateTimeUtil;
+  uuid: { generate: ReturnType<typeof vi.fn> } & UuidUtil;
 }
 
 export function createMockDependencies(): MockDependencies {

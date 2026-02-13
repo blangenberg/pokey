@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { encodeNextToken, decodeNextToken } from '../../helpers/pagination';
+import { encodeNextToken, decodeNextToken } from '../../utils/pagination';
 
 describe('pagination tokens', () => {
   it('round-trips a key through encode/decode', () => {
