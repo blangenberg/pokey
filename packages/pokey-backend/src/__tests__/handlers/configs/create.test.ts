@@ -4,8 +4,11 @@ import { createMockDependencies, type MockDependencies } from '../../helpers/moc
 import { SchemaStatus, ConfigStatus } from 'pokey-common';
 import type { Schema, Config } from 'pokey-common';
 
+const SCHEMA_ID = 'cc000000-c000-4000-8000-c00000000020';
+const EXISTING_CONFLICT_ID = 'bb000000-b000-4000-8000-b00000000020';
+
 const activeSchema: Schema = {
-  id: 's1',
+  id: SCHEMA_ID,
   name: 'test-schema',
   status: SchemaStatus.ACTIVE,
   schemaData: { type: 'object', properties: { a: { type: 'string' } }, required: ['a'], additionalProperties: true },
@@ -31,7 +34,7 @@ describe('config-create handler', () => {
     const res = await handler({
       pathParameters: {},
       queryParameters: {},
-      body: { name: 'cfg', schemaId: 's1', configData: { a: 'hello' } },
+      body: { name: 'cfg', schemaId: SCHEMA_ID, configData: { a: 'hello' } },
     });
     expect(res.statusCode).toBe(404);
   });
@@ -42,7 +45,7 @@ describe('config-create handler', () => {
     const res = await handler({
       pathParameters: {},
       queryParameters: {},
-      body: { name: 'cfg', schemaId: 's1', configData: { a: 'hello' } },
+      body: { name: 'cfg', schemaId: SCHEMA_ID, configData: { a: 'hello' } },
     });
     expect(res.statusCode).toBe(400);
   });
@@ -50,18 +53,22 @@ describe('config-create handler', () => {
   it('returns 406 when configData does not conform to schema', async () => {
     deps.dataLayer.get.mockResolvedValue(activeSchema);
     const handler = createConfigCreateHandler(deps);
-    const res = await handler({ pathParameters: {}, queryParameters: {}, body: { name: 'cfg', schemaId: 's1', configData: { a: 123 } } });
+    const res = await handler({
+      pathParameters: {},
+      queryParameters: {},
+      body: { name: 'cfg', schemaId: SCHEMA_ID, configData: { a: 123 } },
+    });
     expect(res.statusCode).toBe(406);
   });
 
   it('returns 409 when name conflicts', async () => {
     deps.dataLayer.get.mockResolvedValue(activeSchema);
-    deps.dataLayer.query.mockResolvedValue({ items: [{ id: 'existing' }], lastEvaluatedKey: undefined });
+    deps.dataLayer.query.mockResolvedValue({ items: [{ id: EXISTING_CONFLICT_ID }], lastEvaluatedKey: undefined });
     const handler = createConfigCreateHandler(deps);
     const res = await handler({
       pathParameters: {},
       queryParameters: {},
-      body: { name: 'taken', schemaId: 's1', configData: { a: 'hello' } },
+      body: { name: 'taken', schemaId: SCHEMA_ID, configData: { a: 'hello' } },
     });
     expect(res.statusCode).toBe(409);
   });
@@ -73,7 +80,7 @@ describe('config-create handler', () => {
     const res = await handler({
       pathParameters: {},
       queryParameters: {},
-      body: { name: 'MyConfig', schemaId: 's1', configData: { a: 'hello' } },
+      body: { name: 'MyConfig', schemaId: SCHEMA_ID, configData: { a: 'hello' } },
     });
     expect(res.statusCode).toBe(200);
     const body = res.body as Config;

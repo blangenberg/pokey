@@ -7,7 +7,7 @@ const schemasTableDef: CreateTableCommandInput = {
     { AttributeName: 'id', AttributeType: 'S' },
     { AttributeName: 'name', AttributeType: 'S' },
     { AttributeName: 'status', AttributeType: 'S' },
-    { AttributeName: 'createdAt', AttributeType: 'S' },
+    { AttributeName: 'updatedAt', AttributeType: 'S' },
   ],
   KeySchema: [{ AttributeName: 'id', KeyType: 'HASH' }],
   GlobalSecondaryIndexes: [
@@ -20,7 +20,7 @@ const schemasTableDef: CreateTableCommandInput = {
       IndexName: 'schemas-status-index',
       KeySchema: [
         { AttributeName: 'status', KeyType: 'HASH' },
-        { AttributeName: 'createdAt', KeyType: 'RANGE' },
+        { AttributeName: 'updatedAt', KeyType: 'RANGE' },
       ],
       Projection: { ProjectionType: 'ALL' },
     },
@@ -34,7 +34,7 @@ const configurationsTableDef: CreateTableCommandInput = {
     { AttributeName: 'id', AttributeType: 'S' },
     { AttributeName: 'name', AttributeType: 'S' },
     { AttributeName: 'schemaId', AttributeType: 'S' },
-    { AttributeName: 'createdAt', AttributeType: 'S' },
+    { AttributeName: 'updatedAt', AttributeType: 'S' },
   ],
   KeySchema: [{ AttributeName: 'id', KeyType: 'HASH' }],
   GlobalSecondaryIndexes: [
@@ -47,7 +47,7 @@ const configurationsTableDef: CreateTableCommandInput = {
       IndexName: 'configs-schemaId-index',
       KeySchema: [
         { AttributeName: 'schemaId', KeyType: 'HASH' },
-        { AttributeName: 'createdAt', KeyType: 'RANGE' },
+        { AttributeName: 'updatedAt', KeyType: 'RANGE' },
       ],
       Projection: { ProjectionType: 'ALL' },
     },

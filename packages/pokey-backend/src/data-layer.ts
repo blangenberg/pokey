@@ -24,6 +24,7 @@ export interface QueryOptions {
   limit?: number;
   exclusiveStartKey?: Record<string, unknown>;
   projectionExpression?: string;
+  scanIndexForward?: boolean;
 }
 
 export interface ScanOptions {
@@ -76,6 +77,7 @@ export class DataLayer {
         Limit: options.limit,
         ExclusiveStartKey: options.exclusiveStartKey,
         ProjectionExpression: options.projectionExpression,
+        ScanIndexForward: options.scanIndexForward,
       }),
     );
 

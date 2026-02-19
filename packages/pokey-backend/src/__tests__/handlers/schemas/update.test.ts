@@ -4,8 +4,11 @@ import { createMockDependencies, type MockDependencies } from '../../helpers/moc
 import { SchemaStatus } from 'pokey-common';
 import type { Schema } from 'pokey-common';
 
+const SCHEMA_ID = 'aa000000-a000-4000-8000-a00000000030';
+const CONFLICT_ID = 'aa000000-a000-4000-8000-a00000000031';
+
 const existingSchema: Schema = {
-  id: 's1',
+  id: SCHEMA_ID,
   name: 'existing',
   status: SchemaStatus.ACTIVE,
   schemaData: { type: 'object', properties: { a: { type: 'string' } }, required: ['a'], additionalProperties: true },
@@ -24,7 +27,7 @@ describe('schema-update handler', () => {
     deps.dataLayer.get.mockResolvedValue(undefined);
     const handler = createSchemaUpdateHandler(deps);
     const res = await handler({
-      pathParameters: { id: 's1' },
+      pathParameters: { id: SCHEMA_ID },
       queryParameters: {},
       body: { schemaData: { type: 'object', properties: { a: { type: 'string' } } } },
     });
@@ -34,9 +37,8 @@ describe('schema-update handler', () => {
   it('returns 400 when update is not backward-compatible', async () => {
     deps.dataLayer.get.mockResolvedValue({ ...existingSchema });
     const handler = createSchemaUpdateHandler(deps);
-    // Removing required property 'a' is unsafe
     const res = await handler({
-      pathParameters: { id: 's1' },
+      pathParameters: { id: SCHEMA_ID },
       queryParameters: {},
       body: { schemaData: { type: 'object', properties: {}, required: [] } },
     });
@@ -46,9 +48,8 @@ describe('schema-update handler', () => {
   it('allows a backward-compatible update', async () => {
     deps.dataLayer.get.mockResolvedValue({ ...existingSchema });
     const handler = createSchemaUpdateHandler(deps);
-    // Adding a new optional property is safe
     const res = await handler({
-      pathParameters: { id: 's1' },
+      pathParameters: { id: SCHEMA_ID },
       queryParameters: {},
       body: { schemaData: { type: 'object', properties: { a: { type: 'string' }, b: { type: 'number' } }, required: ['a'] } },
     });
@@ -58,10 +59,10 @@ describe('schema-update handler', () => {
 
   it('returns 409 when name conflicts with another schema', async () => {
     deps.dataLayer.get.mockResolvedValue({ ...existingSchema });
-    deps.dataLayer.query.mockResolvedValue({ items: [{ id: 'other' }], lastEvaluatedKey: undefined });
+    deps.dataLayer.query.mockResolvedValue({ items: [{ id: CONFLICT_ID }], lastEvaluatedKey: undefined });
     const handler = createSchemaUpdateHandler(deps);
     const res = await handler({
-      pathParameters: { id: 's1' },
+      pathParameters: { id: SCHEMA_ID },
       queryParameters: {},
       body: { name: 'taken', schemaData: { type: 'object', properties: { a: { type: 'string' } }, required: ['a'] } },
     });

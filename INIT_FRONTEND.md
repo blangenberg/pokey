@@ -257,10 +257,12 @@ Render a filter bar at the top of the page body with these controls on a single 
 | Control    | Type       | Description                                                                                                                                                      |
 | ---------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Name**   | Text input | Filter by schema name (substring match)                                                                                                                          |
-| **ID**     | Text input | Filter by exact schema ID                                                                                                                                        |
+| **ID**     | Text input | Filter by schema ID (substring match)                                                                                                                            |
 | **Status** | Dropdown   | Options: `active` (default), `all`, `disabled`. `active` sends `status=active`, `disabled` sends `status=disabled`, `all` omits the `status` parameter entirely. |
 
-Filters should update the list when the user changes them (debounce text inputs by ~300ms). Changing any filter resets pagination to the first page.
+Filters should update the list when the user changes them (debounce text inputs by ~300ms). Changing any filter resets pagination to the first page. There must be at least 3 characters before executing a name or ID search.
+
+**URL sync:** Reflect the current filter state in URL query parameters (e.g., `/schemas?status=active&name=foo`). On page load, initialize filters from the URL so that filtered views are shareable and bookmarkable. Update the URL (via `replaceState`, not `pushState`) when filters change to avoid polluting the browser history.
 
 #### "Create Schema" Button
 
@@ -270,14 +272,19 @@ A green `Button` with `intent="success"` and text "Create Schema", positioned in
 
 Render schemas in a table matching the Flanders Roles table style. Columns:
 
-| Column      | Description                                                |
-| ----------- | ---------------------------------------------------------- |
-| **name**    | Schema name (clickable link — navigates to `/schemas/:id`) |
-| **status**  | `active` or `disabled`                                     |
-| **created** | Formatted `createdAt` timestamp                            |
-| **updated** | Formatted `updatedAt` timestamp                            |
+| Column      | Description                                                             |
+| ----------- | ----------------------------------------------------------------------- |
+| **id**      | Schema UUID                                                             |
+| **name**    | Schema name (clickable link — navigates to `/schemas/:id`)              |
+| **status**  | `active` (mid/dark green text) or `disabled` (gray text)                |
+| **created** | `createdAt` timestamp in ISO 8601 format (e.g., `2026-02-19T16:00:00Z`) |
+| **updated** | `updatedAt` timestamp in ISO 8601 format (e.g., `2026-02-19T16:00:00Z`) |
+
+Default sort order is by `updatedAt` descending (most recently updated first). This sort order is provided by the backend GSI. No client-side sorting is needed.
 
 Clicking a row's name navigates to the schema editor for that schema.
+
+**Table row interaction:** Rows highlight on hover and use a `pointer` cursor to indicate clickability.
 
 #### Pagination
 
@@ -292,17 +299,17 @@ This page is used for both creating and editing schemas. Reference `assets/schem
 A row at the top of the page body containing:
 
 - **Schema Name** — A text input (editable in create mode, read-only in edit mode) on the left.
-- **Status Toggle** — Only shown in edit mode. A `Switch` component labeled "Active" / "Disabled" reflecting the schema's current status. Toggling it immediately calls POST `/api/schemas/:id/activate` or POST `/api/schemas/:id/disable` and updates the displayed status. Use `intent="success"` when active and `intent="danger"` when disabled.
-- **Save Schema** — A green `Button` (`intent="success"`) on the right. Disabled until the schema is valid.
+- **Status Toggle** — Only shown in edit mode. A `Switch` component labeled "Active" / "Disabled" reflecting the schema's current status. Toggling it optimistically updates the displayed status and immediately calls POST `/api/schemas/:id/activate` or POST `/api/schemas/:id/disable`. On failure, revert the toggle to its previous state and show an error toast. Use `intent="success"` when active and `intent="danger"` when disabled. **Disabling a schema prevents creating new configs against it, but does not affect serving existing active configs.**
+- **Save Schema** — A green `Button` (`intent="success"`) on the right. Disabled until the schema name is specified **and** the tree contains at least one property (beyond the root object node).
 - **Edit JSON** — A secondary `Button` next to Save Schema. Opens a modal dialog with a JSON text editor (see below).
-- **Validate** - Determines if the schema is valid JSON and can be compiled by `Ajv`
+- **Validate** — Validates the current schema state. Checks that the schema is valid JSON and that Ajv can compile it. On success, show a success toast. On failure, show inline error indicators next to the offending tree node(s) where possible, and display a toast summarizing the errors. If the error is general (not attributable to a specific node), show only a toast.
 - **Cancel** — A minimal `Button` that navigates back to `/schemas` without saving. Pagination state is preserved.
 
 #### Split-Pane Layout
 
-The editor body is a horizontal split into two panels:
+The editor body is a horizontal split into two panes separated by a **draggable divider**. The user can resize the panes by dragging the divider. The left pane has a minimum width of **200px** and the right pane has a minimum width of **400px**. Persist the divider position in `localStorage` so it survives page navigation and browser refreshes.
 
-##### Left Panel: Schema Structure (Tree View)
+##### Left Pane: Schema Structure (Tree View)
 
 A visual tree representing the JSON Schema. The tree must be capable of representing **every construct in the JSON Schema draft-07 specification** (https://ajv.js.org/json-schema.html#draft-07). The visual UI is a convenience layer — it must never lose fidelity with the underlying JSON Schema. Any valid draft-07 schema loaded via the Edit JSON modal or fetched from the backend must render correctly in the tree, even if it uses advanced keywords the UI doesn't have dedicated controls for.
 
@@ -421,7 +428,7 @@ _Reference keywords:_
 
 **Interactions:**
 
-- **Click a node** to select it — the right panel shows its configuration.
+- **Click a node** to select it — the right panel shows its configuration. The **entire hierarchy path** from the root to the selected node is visually highlighted (e.g., with a subtle background tint on ancestor nodes), so the user can see where the selection sits in the tree at a glance.
 - **Drag and drop** to reorder properties within the same parent.
 - **"+" button** at the top of the tree — opens a type picker dropdown with options:
   - Text (string)
@@ -435,9 +442,11 @@ _Reference keywords:_
 
 - **Delete** — Each non-root node has a delete action (context menu or icon button). Deleting a node removes it and its children from the schema.
 
-##### Right Panel: Property Configuration
+##### Right Pane: Property Configuration
 
 When a node is selected in the tree, the right panel shows a form for configuring that property. The header reads "Configuration: {display name}".
+
+**Empty state:** When no node is selected (e.g., on initial load), display a hint message such as "Select a node in the tree to configure its properties" with a muted icon (e.g., BlueprintJS `properties` or `arrow-left` icon).
 
 The panel dynamically renders controls based on the node's type, showing all applicable keywords from the tables above. Organize the controls into collapsible sections:
 
@@ -533,6 +542,8 @@ Uses the shared toaster instance and error handling rules (see "Shared Patterns 
 
 **On save (create — POST `/api/schemas`):**
 
+On success, show the toast and **stay on the editor page** (transition to edit mode for the newly created schema). Do not navigate away.
+
 | HTTP Status   | Toast Intent | Message                                               |
 | ------------- | ------------ | ----------------------------------------------------- |
 | 200           | `success`    | "Schema created successfully."                        |
@@ -542,6 +553,8 @@ Uses the shared toaster instance and error handling rules (see "Shared Patterns 
 | Network error | `danger`     | "Unable to reach the server. Check your connection."  |
 
 **On save (update — PUT `/api/schemas/:id`):**
+
+On success, show the toast and **stay on the editor page**. Do not navigate away.
 
 | HTTP Status   | Toast Intent | Message                                                              |
 | ------------- | ------------ | -------------------------------------------------------------------- |
@@ -579,24 +592,29 @@ The config list renders a filterable, paginated table of configurations. It foll
 
 Render a filter bar at the top of the page body with these controls on a single row:
 
-| Control    | Type                           | Description                                                                                                                                                                                                                                                                                                                                                                                              |
-| ---------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Schema** | Type-ahead dropdown (required) | The backend requires `schemaId` for listing configs. This control combines a text input with a dropdown: as the user types, it searches active schemas by name (debounced ~300ms). Each option shows the schema name with a dimmed ID beneath it. Only `active` schemas appear. Selecting a schema sets the `schemaId` filter and fetches the config list. The list is empty until a schema is selected. |
-| **Name**   | Text input                     | Filter by config name (substring match)                                                                                                                                                                                                                                                                                                                                                                  |
-| **Status** | Dropdown                       | Options: `active` (default), `all`, `disabled`. `active` sends `status=active`, `disabled` sends `status=disabled`, `all` omits the `status` parameter entirely.                                                                                                                                                                                                                                         |
+| Control    | Type                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Schema** | Type-ahead dropdown | `schemaId` is optional on the backend, but the UI uses it as the primary filter. This control combines a text input with a dropdown: as the user types, it searches schemas by name via `GET /api/schemas?name=<query>` (debounced ~300ms, no `status` filter — includes both active and disabled schemas). Each option shows the schema name only: **normal text** for active schemas, **dimmed text** for disabled schemas. Selecting a schema sets the `schemaId` filter and fetches the config list. Clearing the schema selection shows all configs (no `schemaId` filter). |
+| **Name**   | Text input          | Filter by config name (substring match)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **ID**     | Text input          | Filter by config ID (substring match)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **Status** | Dropdown            | Options: `active` (default), `all`, `disabled`. `active` sends `status=active`, `disabled` sends `status=disabled`, `all` omits the `status` parameter entirely.                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
-Changing any filter resets pagination to the first page.
+Changing any filter resets pagination to the first page. There must be at least 3 characters before executing a name or ID search.
+
+**URL sync:** Reflect the current filter state in URL query parameters (e.g., `/configs?status=active&name=bar&schemaId=abc`). On page load, initialize filters from the URL so that filtered views are shareable and bookmarkable. Update the URL (via `replaceState`, not `pushState`) when filters change to avoid polluting the browser history.
 
 #### Schema Type-Ahead Dropdown
 
 This is a reusable component (`SchemaSelector`) that should be shared between the config list filter bar and the config editor's schema picker. Implementation details:
 
 - Uses BlueprintJS `Suggest` (or `Select` with a query filter) for the combined input + dropdown experience.
-- On mount or when the query changes, calls `GET /api/schemas?status=active` (with an optional name filter if the backend supports it, otherwise filter client-side from a preloaded list of active schemas).
-- Each item renders two lines: **schema name** (primary) and **schema ID** (dimmed/secondary).
+- On mount or when the query changes, calls `GET /api/schemas?name=<query>` (debounced ~300ms). The backend supports substring matching on the `name` parameter. **Wait until the user has typed at least 3 characters before making the API call.** While fewer than 3 characters are entered, show a helper message such as "Type at least 3 characters to search" instead of results. The backend has a 3-character minimum as a safety mechanism, but the frontend should enforce this to avoid unnecessary requests.
+- The component accepts a `statusFilter` prop to control which schemas are returned:
+  - **Config list filter bar:** Omit the `status` parameter (search all schemas). Each item shows the schema name in **normal text** for active schemas and **dimmed text** for disabled schemas.
+  - **Config editor (create mode):** Pass `status=active` to only show active schemas. Each item shows the schema name (primary) and schema ID (dimmed/secondary). **You cannot create a config against a disabled schema.**
 - Selecting an item calls `onSelect(schema)` with the full schema object (id, name, schemaData).
 - Clearing the input clears the selection.
-- The component accepts `disabled` and `value` (selected schema) props for controlled usage.
+- The component accepts `disabled`, `value` (selected schema), and `statusFilter` props for controlled usage.
 
 #### "Create Config" Button
 
@@ -606,15 +624,22 @@ A green `Button` with `intent="success"` and text "Create Config", positioned in
 
 Render configs in a table matching the Flanders Roles table style. Columns:
 
-| Column      | Description                                                |
-| ----------- | ---------------------------------------------------------- |
-| **name**    | Config name (clickable link — navigates to `/configs/:id`) |
-| **schema**  | Schema name (resolved from `schemaId`)                     |
-| **status**  | `active` or `disabled`                                     |
-| **created** | Formatted `createdAt` timestamp                            |
-| **updated** | Formatted `updatedAt` timestamp                            |
+| Column      | Description                                                             |
+| ----------- | ----------------------------------------------------------------------- |
+| **id**      | Config UUID                                                             |
+| **name**    | Config name (clickable link — navigates to `/configs/:id`)              |
+| **schema**  | Schema name (resolved client-side from `schemaId` — see note below)     |
+| **status**  | `active` (mid/dark green text) or `disabled` (gray text)                |
+| **created** | `createdAt` timestamp in ISO 8601 format (e.g., `2026-02-19T16:00:00Z`) |
+| **updated** | `updatedAt` timestamp in ISO 8601 format (e.g., `2026-02-19T16:00:00Z`) |
+
+Default sort order is by `updatedAt` descending (most recently updated first). This sort order is provided by the backend GSI. No client-side sorting is needed. No column sorting (click-to-sort) is provided in v1.
 
 Clicking a row's name navigates to the config editor for that config.
+
+**Table row interaction:** Rows highlight on hover and use a `pointer` cursor to indicate clickability.
+
+**Schema name resolution:** The backend config list endpoint returns `schemaId` but not `schemaName`. To display schema names in the table, collect the unique `schemaId` values from the current page of config results and resolve each via `GET /api/schemas/:id`. Cache resolved names in a client-side `Map<string, string>` so subsequent pages reuse already-resolved names. Display resolved names in **normal text** for active schemas and **dimmed text** for disabled schemas. If a `schemaId` cannot be resolved (e.g., the schema was deleted), fall back to displaying the raw `schemaId` in dimmed/italic text.
 
 #### Pagination
 
@@ -629,8 +654,8 @@ This page is used for both creating and editing configurations.
 A row at the top of the page body containing:
 
 - **Config Name** — A text input (editable in create mode, read-only in edit mode) on the left.
-- **Schema** — In create mode: the `SchemaSelector` type-ahead dropdown (see above). Once a schema is selected, it cannot be changed without starting over. In edit mode: read-only text showing the schema name.
-- **Status Toggle** — Only shown in edit mode. A `Switch` labeled "Active" / "Disabled" reflecting the config's current status. Toggling it immediately calls POST `/api/configs/:id/activate` or POST `/api/configs/:id/disable`. Use `intent="success"` when active and `intent="danger"` when disabled.
+- **Schema** — In create mode: the `SchemaSelector` type-ahead dropdown (see above), showing only active schemas. The user may change the selected schema at any time before the first save — selecting a new schema clears the form and re-initializes it with the new schema's defaults. In edit mode: read-only text showing the schema name (the schema cannot be changed after the config has been saved).
+- **Status Toggle** — Only shown in edit mode. A `Switch` labeled "Active" / "Disabled" reflecting the config's current status. Toggling it optimistically updates the displayed status and immediately calls POST `/api/configs/:id/activate` or POST `/api/configs/:id/disable`. On failure, revert the toggle to its previous state and show an error toast. Use `intent="success"` when active and `intent="danger"` when disabled.
 - **Save Config** — A green `Button` (`intent="success"`) on the right. Disabled until the form passes client-side validation.
 - **Cancel** — A minimal `Button` that navigates back to `/configs` without saving. Pagination state is preserved.
 
@@ -704,19 +729,21 @@ Before saving, compile the selected schema with Ajv and validate the form data c
 
 #### Create vs. Edit Behavior
 
-| Aspect            | Create (`/configs/new`)              | Edit (`/configs/:id`)                          |
-| ----------------- | ------------------------------------ | ---------------------------------------------- |
-| Config name       | Editable text input                  | Read-only display                              |
-| Schema            | Selectable via `SchemaSelector`      | Read-only (loaded from config's `schemaId`)    |
-| Initial form data | Empty (defaults from schema applied) | Loaded from backend via GET `/api/configs/:id` |
-| Save action       | POST `/api/configs`                  | PUT `/api/configs/:id`                         |
-| Cancel            | Navigate to `/configs`               | Navigate to `/configs`                         |
+| Aspect            | Create (`/configs/new`)                                                    | Edit (`/configs/:id`)                          |
+| ----------------- | -------------------------------------------------------------------------- | ---------------------------------------------- |
+| Config name       | Editable text input                                                        | Read-only display                              |
+| Schema            | Selectable via `SchemaSelector` (active only; changeable until first save) | Read-only (loaded from config's `schemaId`)    |
+| Initial form data | Empty (defaults from schema applied)                                       | Loaded from backend via GET `/api/configs/:id` |
+| Save action       | POST `/api/configs`                                                        | PUT `/api/configs/:id`                         |
+| Cancel            | Navigate to `/configs`                                                     | Navigate to `/configs`                         |
 
 #### Error Handling
 
 Same shared toaster instance and general rules as the schema pages.
 
 **On save (create — POST `/api/configs`):**
+
+On success, show the toast and **stay on the editor page** (transition to edit mode for the newly created config). Do not navigate away.
 
 | HTTP Status   | Toast Intent | Message                                                                |
 | ------------- | ------------ | ---------------------------------------------------------------------- |
@@ -728,6 +755,8 @@ Same shared toaster instance and general rules as the schema pages.
 | Network error | `danger`     | "Unable to reach the server. Check your connection."                   |
 
 **On save (update — PUT `/api/configs/:id`):**
+
+On success, show the toast and **stay on the editor page**. Do not navigate away.
 
 | HTTP Status   | Toast Intent | Message                                                                |
 | ------------- | ------------ | ---------------------------------------------------------------------- |
@@ -789,10 +818,13 @@ interface PaginationState {
 - **Back** pops from `previousTokens` into `currentToken`.
 - Changing any filter resets the pagination state.
 - State is preserved when navigating to/from detail pages within the same session.
+- **Sparse pages:** When filters are active, a page may return fewer items than `limit` while still providing a `nextToken`. This is because DynamoDB's `Limit` caps the number of items _evaluated_, not _returned_ — items that don't match the filter are counted toward the limit but excluded from results. Do not treat a short page as the end of results; rely on the presence of `nextToken` to determine if more pages exist.
 
-Extract a reusable `PaginationControls` component that renders the Back/Next buttons and accepts the pagination state + callbacks. Render it at both the top and bottom of the table.
+Extract a reusable `PaginationControls` component that renders the Back/Next buttons and accepts the pagination state + callbacks. Render it at both the top and bottom of the table. **Do not display page numbers, item counts, or total counts** — DynamoDB cursor-based pagination does not provide this information.
 
 > **Future improvement:** Replace Back/Next buttons with infinite scroll + row virtualization (e.g., `react-window` or `@tanstack/react-virtual`). Not needed for the initial implementation.
+
+> **Backend GSI note:** To support sorting by `updatedAt`, the backend GSIs (`schemas-status-index`, `configs-schemaId-index`) must use `updatedAt` as the sort key instead of `createdAt`. Because `updatedAt` is mutable, an item's position in the GSI shifts when it is updated. This means that during active editing, a paginated list may occasionally show an item on a different page than expected, or skip/duplicate an item across page boundaries. This is an acceptable trade-off for an admin tool — the user can always refresh the current page to get a consistent view.
 
 ### List Page Layout
 
@@ -813,6 +845,67 @@ Both the schema editor and config editor have an activate/disable toggle in the 
 - Accepts `status`, `onToggle`, and `disabled` props.
 - Renders a `Switch` with `intent="success"` when active and `intent="danger"` when disabled.
 - Calls `onToggle` on change — the parent component handles the API call.
+- **On API failure, revert the toggle to its previous state** and show an error toast. The component should optimistically update the visual state immediately on click, then roll back if the API call fails.
+
+### Unsaved Changes Guard
+
+When the user has unsaved changes in the schema editor or config editor, navigating away (via tab buttons, browser back, or any route change) must trigger a confirmation dialog:
+
+- Use React Router's `useBlocker` hook to intercept navigation when the form is dirty.
+- Display a BlueprintJS `Alert` dialog: "You have unsaved changes. Leave without saving?"
+- Two buttons: **"Leave"** (proceeds with navigation, discarding changes) and **"Stay"** (cancels navigation).
+- Track "dirty" state by comparing the current editor state to the last saved/loaded state.
+
+### Loading States
+
+Every view that fetches data must show an appropriate loading indicator:
+
+- **List pages (Schema List, Config List):** Show a BlueprintJS `Spinner` centered in the table area while the initial fetch is in progress. On subsequent fetches (pagination, filter changes), keep the existing table visible but overlay a subtle loading indicator (e.g., a thin progress bar at the top of the table or reduce table opacity).
+- **Editor pages (Schema Editor, Config Editor):** Show a full-page `Spinner` centered in the body area while loading the resource via GET. Once loaded, render the editor normally.
+- **SchemaSelector dropdown:** Show a `Spinner` inside the dropdown menu while schema search results are loading.
+- **Save / status toggle actions:** Disable the triggering button and show a `Spinner` inside it while the API call is in flight.
+
+### Empty States
+
+When a list or search returns zero results, show a BlueprintJS `NonIdealState` component instead of an empty table:
+
+- **No schemas/configs exist:** Icon `search`, title "No schemas found" / "No configs found", description "Create your first schema to get started." / "Create your first config to get started." Include a "Create" action button.
+- **No results match filters:** Icon `filter-remove`, title "No matching results", description "Try adjusting your filters."
+- **Config editor with no schema selected (create mode):** Show a `NonIdealState` with icon `database` and text "Select a schema to begin configuring."
+
+### API Request Cancellation
+
+Use `AbortController` to cancel in-flight API requests when they become stale. This prevents memory leaks and stale response handling:
+
+- **List pages:** When the user changes a filter or navigates to a new page, abort any pending list fetch before issuing a new one. Create a new `AbortController` per request and pass its `signal` to the Ky call via `{ signal: controller.signal }`.
+- **SchemaSelector type-ahead:** Abort the previous schema search request when a new keystroke triggers a new search.
+- **Component unmount:** Abort any in-flight requests in a `useEffect` cleanup function to prevent state updates on unmounted components.
+- **Graceful handling:** When a request is aborted, Ky throws an `AbortError`. Catch it silently (do not show error toasts for intentional aborts). Use a check like `if (error.name === 'AbortError') return;` in catch blocks.
+
+### Error Boundary
+
+Wrap the page body area (the Pokey-specific UI below the main header and sub-header) in a React Error Boundary:
+
+- The header and sub-header must remain functional even if the body crashes — the user should always be able to navigate to a different tab.
+- On error, render a `NonIdealState` component with icon `error`, title "Something went wrong", and a "Reload" button that resets the error boundary state.
+- Log the error and component stack to the console (and to the observability layer if available).
+
+### Data Freshness
+
+When the user navigates back to a list page (e.g., after editing a schema or config), re-fetch the list using the **current pagination token** to reflect any changes made during the edit session. Do not reset to the first page — preserve the user's position in the list and refresh in place.
+
+### Accessibility
+
+Apply baseline accessibility practices throughout:
+
+- **ARIA labels:** Add `aria-label` attributes to icon-only buttons (e.g., the "+" add node button, delete node button, pagination Back/Next buttons). Label form inputs with `<label>` elements or `aria-label`.
+- **Focus management:** After adding a new tree node, focus the new node's name input in the property panel. After deleting a node, return focus to the parent node or the nearest sibling. After closing a modal, return focus to the element that triggered it.
+- **Keyboard navigation:** Ensure all interactive elements are reachable via Tab. The schema tree should support arrow-key navigation between nodes when focused.
+- **Status announcements:** Use an `aria-live` region or BlueprintJS toaster's built-in ARIA support to announce toast messages to screen readers.
+
+### Layout
+
+The application targets desktop browsers only. Use a **non-reactive (fixed) layout** with a minimum content width. Do not implement responsive breakpoints or mobile layouts for v1. Assume a viewport width of at least 1024px.
 
 ## React Best Practices
 

@@ -4,6 +4,9 @@ import { createMockDependencies, type MockDependencies } from '../../helpers/moc
 import { SchemaStatus } from 'pokey-common';
 import type { Schema } from 'pokey-common';
 
+const EXISTING_CONFLICT_ID = 'aa000000-a000-4000-8000-a00000000020';
+const MOCK_GENERATED_ID = '10000000-1000-4000-8000-100000000001';
+
 describe('schema-create handler', () => {
   let deps: MockDependencies;
 
@@ -24,13 +27,11 @@ describe('schema-create handler', () => {
       queryParameters: {},
       body: { name: 'test', schemaData: { type: 'invalid-type-value' } },
     });
-    // Ajv may or may not throw for this — the key behavior is that truly uncompilable schemas return 422
-    // This test mainly verifies the handler doesn't crash
     expect([200, 422]).toContain(res.statusCode);
   });
 
   it('returns 409 when a schema with the same name exists', async () => {
-    deps.dataLayer.query.mockResolvedValue({ items: [{ id: 'existing' }], lastEvaluatedKey: undefined });
+    deps.dataLayer.query.mockResolvedValue({ items: [{ id: EXISTING_CONFLICT_ID }], lastEvaluatedKey: undefined });
     const handler = createSchemaCreateHandler(deps);
     const res = await handler({
       pathParameters: {},
@@ -52,7 +53,7 @@ describe('schema-create handler', () => {
     const body = res.body as Schema;
     expect(body.name).toBe('myschema');
     expect(body.status).toBe(SchemaStatus.ACTIVE);
-    expect(body.id).toBe('test-uuid-0001');
+    expect(body.id).toBe(MOCK_GENERATED_ID);
     expect(deps.dataLayer.put).toHaveBeenCalled();
   });
 });

@@ -4,8 +4,11 @@ import { createMockDependencies, type MockDependencies } from '../../helpers/moc
 import { SchemaStatus, ConfigStatus } from 'pokey-common';
 import type { Schema, Config } from 'pokey-common';
 
+const SCHEMA_ID = 'cc000000-c000-4000-8000-c00000000030';
+const CONFIG_ID = 'bb000000-b000-4000-8000-b00000000030';
+
 const activeSchema: Schema = {
-  id: 's1',
+  id: SCHEMA_ID,
   name: 'test-schema',
   status: SchemaStatus.ACTIVE,
   schemaData: { type: 'object', properties: { a: { type: 'string' } }, required: ['a'], additionalProperties: true },
@@ -13,9 +16,9 @@ const activeSchema: Schema = {
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
 const existingConfig: Config = {
-  id: 'c1',
+  id: CONFIG_ID,
   name: 'existing',
-  schemaId: 's1',
+  schemaId: SCHEMA_ID,
   status: ConfigStatus.ACTIVE,
   configData: { a: 'old' },
   createdAt: '2026-01-01T00:00:00.000Z',
@@ -23,8 +26,8 @@ const existingConfig: Config = {
 };
 
 function mockGetByTable(table: string, key: Record<string, unknown>): unknown {
-  if (table === 'Configurations' && key['id'] === 'c1') return existingConfig;
-  if (table === 'Schemas' && key['id'] === 's1') return activeSchema;
+  if (table === 'Configurations' && key['id'] === CONFIG_ID) return existingConfig;
+  if (table === 'Schemas' && key['id'] === SCHEMA_ID) return activeSchema;
   return undefined;
 }
 
@@ -37,14 +40,22 @@ describe('config-update handler', () => {
   it('returns 404 when config does not exist', async () => {
     deps.dataLayer.get.mockResolvedValue(undefined);
     const handler = createConfigUpdateHandler(deps);
-    const res = await handler({ pathParameters: { id: 'c1' }, queryParameters: {}, body: { schemaId: 's1', configData: { a: 'new' } } });
+    const res = await handler({
+      pathParameters: { id: CONFIG_ID },
+      queryParameters: {},
+      body: { schemaId: SCHEMA_ID, configData: { a: 'new' } },
+    });
     expect(res.statusCode).toBe(404);
   });
 
   it('returns 406 when configData fails schema validation', async () => {
     deps.dataLayer.get.mockImplementation((table: string, key: Record<string, unknown>) => Promise.resolve(mockGetByTable(table, key)));
     const handler = createConfigUpdateHandler(deps);
-    const res = await handler({ pathParameters: { id: 'c1' }, queryParameters: {}, body: { schemaId: 's1', configData: { a: 999 } } });
+    const res = await handler({
+      pathParameters: { id: CONFIG_ID },
+      queryParameters: {},
+      body: { schemaId: SCHEMA_ID, configData: { a: 999 } },
+    });
     expect(res.statusCode).toBe(406);
   });
 
@@ -52,9 +63,9 @@ describe('config-update handler', () => {
     deps.dataLayer.get.mockImplementation((table: string, key: Record<string, unknown>) => Promise.resolve(mockGetByTable(table, key)));
     const handler = createConfigUpdateHandler(deps);
     const res = await handler({
-      pathParameters: { id: 'c1' },
+      pathParameters: { id: CONFIG_ID },
       queryParameters: {},
-      body: { schemaId: 's1', configData: { a: 'updated' } },
+      body: { schemaId: SCHEMA_ID, configData: { a: 'updated' } },
     });
     expect(res.statusCode).toBe(200);
     expect(deps.dataLayer.update).toHaveBeenCalled();

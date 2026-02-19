@@ -4,6 +4,9 @@ import { createMockDependencies, type MockDependencies } from '../../helpers/moc
 import { SchemaStatus } from 'pokey-common';
 import type { Schema } from 'pokey-common';
 
+const SCHEMA_ID = 'aa000000-a000-4000-8000-a00000000050';
+const MISSING_ID = 'aa000000-a000-4000-8000-a00000000551';
+
 describe('schema-activate handler', () => {
   let deps: MockDependencies;
 
@@ -14,13 +17,13 @@ describe('schema-activate handler', () => {
   it('returns 404 when schema does not exist', async () => {
     deps.dataLayer.get.mockResolvedValue(undefined);
     const handler = createSchemaActivateHandler(deps);
-    const res = await handler({ pathParameters: { id: 'missing' }, queryParameters: {}, body: undefined });
+    const res = await handler({ pathParameters: { id: MISSING_ID }, queryParameters: {}, body: undefined });
     expect(res.statusCode).toBe(404);
   });
 
   it('activates a disabled schema', async () => {
     const schema: Schema = {
-      id: 's1',
+      id: SCHEMA_ID,
       name: 'test',
       status: SchemaStatus.DISABLED,
       schemaData: {},
@@ -29,7 +32,7 @@ describe('schema-activate handler', () => {
     };
     deps.dataLayer.get.mockResolvedValue(schema);
     const handler = createSchemaActivateHandler(deps);
-    const res = await handler({ pathParameters: { id: 's1' }, queryParameters: {}, body: undefined });
+    const res = await handler({ pathParameters: { id: SCHEMA_ID }, queryParameters: {}, body: undefined });
     expect(res.statusCode).toBe(200);
     const body = res.body as Schema;
     expect(body.status).toBe(SchemaStatus.ACTIVE);

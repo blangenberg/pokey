@@ -83,10 +83,50 @@ async function run(): Promise<void> {
   assertStatus('Create schema', 200, createSchema);
 
   const listSchemas = await api('GET', '/schemas');
-  assertStatus('List schemas', 200, listSchemas);
+  assertStatus('List schemas (all)', 200, listSchemas);
 
   const getSchema = await api('GET', `/schemas/${schemaId}`);
   assertStatus('Get schema', 200, getSchema);
+
+  // -- Schema filter tests ----------------------------------------------------
+  console.log('');
+  console.log(bold('Schema filters'));
+
+  const schemaByName = await api('GET', '/schemas?name=aura&status=active');
+  assertStatus('List schemas by name="aura" + status=active', 200, schemaByName);
+  const schemaNameItems = schemaByName.body['items'] as Array<Record<string, unknown>>;
+  const schemaNameMatch = schemaNameItems.some((item) => item['id'] === schemaId);
+  if (schemaNameMatch) {
+    console.log(green('  ✓ Name+status filter found created schema'));
+    pass++;
+  } else {
+    console.log(red('  ✗ Name+status filter did not find created schema'));
+    fail++;
+  }
+
+  const partialId = schemaId.slice(0, 8);
+  const listById = await api('GET', `/schemas?id=${encodeURIComponent(partialId)}`);
+  assertStatus('List schemas by id substring', 200, listById);
+  const idItems = listById.body['items'] as Array<Record<string, unknown>>;
+  const idMatch = idItems.some((item) => item['id'] === schemaId);
+  if (idMatch) {
+    console.log(green('  ✓ ID filter found created schema'));
+    pass++;
+  } else {
+    console.log(red('  ✗ ID filter did not find created schema'));
+    fail++;
+  }
+
+  const tooShort = await api('GET', '/schemas?name=au');
+  assertStatus('List schemas with name < 3 chars (expect empty)', 200, tooShort);
+  const tooShortItems = tooShort.body['items'] as Array<Record<string, unknown>>;
+  if (tooShortItems.length === 0) {
+    console.log(green('  ✓ Short name filter returned empty results'));
+    pass++;
+  } else {
+    console.log(red('  ✗ Short name filter should have returned empty results'));
+    fail++;
+  }
 
   // -- Config lifecycle -------------------------------------------------------
   console.log('');
@@ -118,6 +158,49 @@ async function run(): Promise<void> {
 
   const getConfig = await api('GET', `/configs/${configId}`);
   assertStatus('Get config', 200, getConfig);
+
+  // -- Config filter tests ----------------------------------------------------
+  console.log('');
+  console.log(bold('Config filters'));
+
+  const listConfigsAll = await api('GET', '/configs');
+  assertStatus('List configs (no filters)', 200, listConfigsAll);
+
+  const configByName = await api('GET', '/configs?name=home&status=active');
+  assertStatus('List configs by name="home" + status=active', 200, configByName);
+  const configNameItems = configByName.body['items'] as Array<Record<string, unknown>>;
+  const configNameMatch = configNameItems.some((item) => item['id'] === configId);
+  if (configNameMatch) {
+    console.log(green('  ✓ Config name+status filter found created config'));
+    pass++;
+  } else {
+    console.log(red('  ✗ Config name+status filter did not find created config'));
+    fail++;
+  }
+
+  const configPartialId = configId.slice(0, 8);
+  const listConfigsById = await api('GET', `/configs?id=${encodeURIComponent(configPartialId)}`);
+  assertStatus('List configs by id substring', 200, listConfigsById);
+  const configIdItems = listConfigsById.body['items'] as Array<Record<string, unknown>>;
+  const configIdMatch = configIdItems.some((item) => item['id'] === configId);
+  if (configIdMatch) {
+    console.log(green('  ✓ Config ID filter found created config'));
+    pass++;
+  } else {
+    console.log(red('  ✗ Config ID filter did not find created config'));
+    fail++;
+  }
+
+  const configTooShort = await api('GET', '/configs?name=ho');
+  assertStatus('List configs with name < 3 chars (expect empty)', 200, configTooShort);
+  const configTooShortItems = configTooShort.body['items'] as Array<Record<string, unknown>>;
+  if (configTooShortItems.length === 0) {
+    console.log(green('  ✓ Short config name filter returned empty results'));
+    pass++;
+  } else {
+    console.log(red('  ✗ Short config name filter should have returned empty results'));
+    fail++;
+  }
 
   // -- Schema update ----------------------------------------------------------
   console.log('');

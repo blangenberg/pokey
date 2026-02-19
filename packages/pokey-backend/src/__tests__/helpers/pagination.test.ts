@@ -3,7 +3,7 @@ import { encodeNextToken, decodeNextToken } from '../../utils/pagination';
 
 describe('pagination tokens', () => {
   it('round-trips a key through encode/decode', () => {
-    const key = { id: { S: 'abc-123' } };
+    const key = { id: { S: 'ee000000-e000-4000-8000-e00000000001' } };
     const token = encodeNextToken(key);
     expect(decodeNextToken(token)).toEqual(key);
   });

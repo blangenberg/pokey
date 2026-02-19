@@ -46,7 +46,7 @@ export function createMockDependencies(): MockDependencies {
       now: vi.fn(() => '2026-01-15T12:00:00.000Z'),
     } as unknown as MockDependencies['dateTime'],
     uuid: {
-      generate: vi.fn(() => 'test-uuid-0001'),
+      generate: vi.fn(() => '10000000-1000-4000-8000-100000000001'),
     } as unknown as MockDependencies['uuid'],
   };
 }

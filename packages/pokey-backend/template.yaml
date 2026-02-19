@@ -26,7 +26,7 @@ Resources:
           AttributeType: S
         - AttributeName: status
           AttributeType: S
-        - AttributeName: createdAt
+        - AttributeName: updatedAt
           AttributeType: S
       KeySchema:
         - AttributeName: id
@@ -42,7 +42,7 @@ Resources:
           KeySchema:
             - AttributeName: status
               KeyType: HASH
-            - AttributeName: createdAt
+            - AttributeName: updatedAt
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
@@ -59,7 +59,7 @@ Resources:
           AttributeType: S
         - AttributeName: schemaId
           AttributeType: S
-        - AttributeName: createdAt
+        - AttributeName: updatedAt
           AttributeType: S
       KeySchema:
         - AttributeName: id
@@ -75,7 +75,7 @@ Resources:
           KeySchema:
             - AttributeName: schemaId
               KeyType: HASH
-            - AttributeName: createdAt
+            - AttributeName: updatedAt
               KeyType: RANGE
           Projection:
             ProjectionType: ALL

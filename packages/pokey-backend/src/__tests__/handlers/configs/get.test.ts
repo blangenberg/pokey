@@ -4,10 +4,14 @@ import { createMockDependencies, type MockDependencies } from '../../helpers/moc
 import { ConfigStatus } from 'pokey-common';
 import type { Config } from 'pokey-common';
 
+const CONFIG_ID = 'bb000000-b000-4000-8000-b00000000001';
+const SCHEMA_ID = 'cc000000-c000-4000-8000-c00000000001';
+const MISSING_ID = 'bb000000-b000-4000-8000-b00000000401';
+
 const activeConfig: Config = {
-  id: 'c1',
+  id: CONFIG_ID,
   name: 'test-config',
-  schemaId: 's1',
+  schemaId: SCHEMA_ID,
   status: ConfigStatus.ACTIVE,
   configData: { a: 'hello' },
   createdAt: '2026-01-01T00:00:00.000Z',
@@ -29,14 +33,14 @@ describe('config-get handler', () => {
   it('returns 404 when config is not found', async () => {
     deps.dataLayer.get.mockResolvedValue(undefined);
     const handler = createConfigGetHandler(deps);
-    const res = await handler({ pathParameters: { id: 'missing' }, queryParameters: {}, body: undefined });
+    const res = await handler({ pathParameters: { id: MISSING_ID }, queryParameters: {}, body: undefined });
     expect(res.statusCode).toBe(404);
   });
 
   it('returns 404 for disabled config when includeDisabled is false', async () => {
     deps.dataLayer.get.mockResolvedValue({ ...activeConfig, status: ConfigStatus.DISABLED });
     const handler = createConfigGetHandler(deps);
-    const res = await handler({ pathParameters: { id: 'c1' }, queryParameters: {}, body: undefined });
+    const res = await handler({ pathParameters: { id: CONFIG_ID }, queryParameters: {}, body: undefined });
     expect(res.statusCode).toBe(404);
   });
 
@@ -44,14 +48,14 @@ describe('config-get handler', () => {
     const disabled = { ...activeConfig, status: ConfigStatus.DISABLED };
     deps.dataLayer.get.mockResolvedValue(disabled);
     const handler = createConfigGetHandler(deps);
-    const res = await handler({ pathParameters: { id: 'c1' }, queryParameters: { includeDisabled: 'true' }, body: undefined });
+    const res = await handler({ pathParameters: { id: CONFIG_ID }, queryParameters: { includeDisabled: 'true' }, body: undefined });
     expect(res.statusCode).toBe(200);
   });
 
   it('returns 200 with config when found', async () => {
     deps.dataLayer.get.mockResolvedValue(activeConfig);
     const handler = createConfigGetHandler(deps);
-    const res = await handler({ pathParameters: { id: 'c1' }, queryParameters: {}, body: undefined });
+    const res = await handler({ pathParameters: { id: CONFIG_ID }, queryParameters: {}, body: undefined });
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual(activeConfig);
   });
