@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createSchemaGetHandler } from '../../../handlers/schema-handlers/get';
 import { createMockDependencies, type MockDependencies } from '../../helpers/mock-dependencies';
 import { SchemaStatus } from 'pokey-common';
+import type { Schema } from 'pokey-common';
 
 describe('schema-get handler', () => {
   let deps: MockDependencies;
@@ -24,7 +25,7 @@ describe('schema-get handler', () => {
   });
 
   it('returns 200 with the schema when found', async () => {
-    const schema = {
+    const schema: Schema = {
       id: 's1',
       name: 'test',
       status: SchemaStatus.ACTIVE,

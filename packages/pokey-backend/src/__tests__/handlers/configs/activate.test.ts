@@ -31,7 +31,7 @@ describe('config-activate handler', () => {
     const handler = createConfigActivateHandler(deps);
     const res = await handler({ pathParameters: { id: 'c1' }, queryParameters: {}, body: undefined });
     expect(res.statusCode).toBe(200);
-    const body = res.body as Record<string, unknown>;
-    expect(body['status']).toBe(ConfigStatus.ACTIVE);
+    const body = res.body as Config;
+    expect(body.status).toBe(ConfigStatus.ACTIVE);
   });
 });

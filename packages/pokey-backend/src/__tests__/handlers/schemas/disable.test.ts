@@ -31,8 +31,8 @@ describe('schema-disable handler', () => {
     const handler = createSchemaDisableHandler(deps);
     const res = await handler({ pathParameters: { id: 's1' }, queryParameters: {}, body: undefined });
     expect(res.statusCode).toBe(200);
-    const body = res.body as Record<string, unknown>;
-    expect(body['status']).toBe(SchemaStatus.DISABLED);
+    const body = res.body as Schema;
+    expect(body.status).toBe(SchemaStatus.DISABLED);
     expect(deps.dataLayer.update).toHaveBeenCalled();
   });
 });

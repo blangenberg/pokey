@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createConfigCreateHandler } from '../../../handlers/config-handlers/create';
 import { createMockDependencies, type MockDependencies } from '../../helpers/mock-dependencies';
 import { SchemaStatus, ConfigStatus } from 'pokey-common';
-import type { Schema } from 'pokey-common';
+import type { Schema, Config } from 'pokey-common';
 
 const activeSchema: Schema = {
   id: 's1',
@@ -76,9 +76,9 @@ describe('config-create handler', () => {
       body: { name: 'MyConfig', schemaId: 's1', configData: { a: 'hello' } },
     });
     expect(res.statusCode).toBe(200);
-    const body = res.body as Record<string, unknown>;
-    expect(body['name']).toBe('myconfig');
-    expect(body['status']).toBe(ConfigStatus.ACTIVE);
+    const body = res.body as Config;
+    expect(body.name).toBe('myconfig');
+    expect(body.status).toBe(ConfigStatus.ACTIVE);
     expect(deps.dataLayer.put).toHaveBeenCalled();
   });
 });

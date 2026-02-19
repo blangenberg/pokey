@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createSchemaCreateHandler } from '../../../handlers/schema-handlers/create';
 import { createMockDependencies, type MockDependencies } from '../../helpers/mock-dependencies';
 import { SchemaStatus } from 'pokey-common';
+import type { Schema } from 'pokey-common';
 
 describe('schema-create handler', () => {
   let deps: MockDependencies;
@@ -48,10 +49,10 @@ describe('schema-create handler', () => {
       body: { name: 'MySchema', schemaData: { type: 'object', properties: { a: { type: 'string' } } } },
     });
     expect(res.statusCode).toBe(200);
-    const body = res.body as Record<string, unknown>;
-    expect(body['name']).toBe('myschema');
-    expect(body['status']).toBe(SchemaStatus.ACTIVE);
-    expect(body['id']).toBe('test-uuid-0001');
+    const body = res.body as Schema;
+    expect(body.name).toBe('myschema');
+    expect(body.status).toBe(SchemaStatus.ACTIVE);
+    expect(body.id).toBe('test-uuid-0001');
     expect(deps.dataLayer.put).toHaveBeenCalled();
   });
 });

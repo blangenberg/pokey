@@ -38,3 +38,6 @@ docker/dynamodb-data/
 
 # Ladle
 .ladle/build/
+
+# Flanders checkout as an examplar.
+flanders/

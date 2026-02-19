@@ -31,8 +31,8 @@ describe('schema-activate handler', () => {
     const handler = createSchemaActivateHandler(deps);
     const res = await handler({ pathParameters: { id: 's1' }, queryParameters: {}, body: undefined });
     expect(res.statusCode).toBe(200);
-    const body = res.body as Record<string, unknown>;
-    expect(body['status']).toBe(SchemaStatus.ACTIVE);
+    const body = res.body as Schema;
+    expect(body.status).toBe(SchemaStatus.ACTIVE);
     expect(deps.dataLayer.update).toHaveBeenCalled();
   });
 });
