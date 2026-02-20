@@ -1,0 +1,156 @@
+@use '../../styles/colors' as *;
+
+.pokey-schema-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+}
+
+.pokey-schema-editor-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.pokey-schema-editor-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pokey-schema-editor-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pokey-schema-editor-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pokey-schema-editor-left {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  flex-shrink: 0;
+}
+
+.pokey-schema-editor-tree-header {
+  display: flex;
+  padding: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pokey-schema-editor-tree {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 0;
+}
+
+.pokey-schema-editor-divider {
+  width: 5px;
+  cursor: col-resize;
+  background: rgba(255, 255, 255, 0.1);
+  transition: background 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+}
+
+.pokey-schema-editor-right {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  min-width: 0;
+}
+
+// Tree node styles
+.pokey-tree-node {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  gap: 6px;
+  user-select: none;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &--selected {
+    background: rgba(45, 114, 210, 0.3) !important;
+  }
+
+  &--ancestor {
+    background: rgba(45, 114, 210, 0.1);
+  }
+}
+
+.pokey-tree-node-chevron {
+  display: flex;
+  align-items: center;
+  width: 16px;
+  flex-shrink: 0;
+  cursor: pointer;
+
+  &--spacer {
+    cursor: default;
+  }
+}
+
+.pokey-tree-node-icon {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.pokey-tree-node-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.pokey-tree-node-type {
+  opacity: 0.5;
+  font-size: 12px;
+}
+
+.pokey-tree-node-required {
+  color: #db3737;
+  font-size: 8px;
+  flex-shrink: 0;
+}
+
+.pokey-tree-node-delete {
+  opacity: 0;
+  transition: opacity 0.15s;
+
+  .pokey-tree-node:hover & {
+    opacity: 0.6;
+  }
+}
+
+// Property panel styles
+.pokey-property-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pokey-property-panel-header {
+  margin: 0 0 12px;
+  font-size: 16px;
+}

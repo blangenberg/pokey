@@ -1,0 +1,46 @@
+.pokey-config-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+}
+
+.pokey-config-editor-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.pokey-config-editor-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pokey-config-editor-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pokey-config-editor-body {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 16px;
+}
+
+.pokey-dynamic-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pokey-form-object-card {
+  margin-left: 12px;
+  border-left: 2px solid rgba(45, 114, 210, 0.3);
+}

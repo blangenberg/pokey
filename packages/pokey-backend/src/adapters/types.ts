@@ -1,7 +1,6 @@
 import type { DataLayer } from '../data-layer';
 import type { Observability } from '../observability';
-import type { DateTimeUtil } from '../utils/datetime-util';
-import type { UuidUtil } from '../utils/uuid-util';
+import type { DateTimeUtil, UuidUtil } from 'pokey-common';
 
 export interface HandlerRequest {
   pathParameters: Record<string, string | undefined>;

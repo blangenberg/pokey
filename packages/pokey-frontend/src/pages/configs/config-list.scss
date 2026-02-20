@@ -1,0 +1,50 @@
+@use '../../styles/colors' as *;
+
+.pokey-config-table {
+  width: 100%;
+}
+
+.pokey-config-row {
+  cursor: pointer;
+}
+
+.pokey-config-id {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+  opacity: 0.7;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pokey-config-name {
+  font-weight: 600;
+}
+
+.pokey-config-status {
+  text-transform: capitalize;
+
+  &--active {
+    color: $status-active-color;
+  }
+
+  &--disabled {
+    color: $status-disabled-color;
+  }
+}
+
+.pokey-config-schema--disabled {
+  opacity: 0.5;
+}
+
+.pokey-config-schema--deleted {
+  font-style: italic;
+  opacity: 0.5;
+}
+
+.pokey-config-schema--unknown {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+  opacity: 0.5;
+}

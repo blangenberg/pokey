@@ -1,0 +1,161 @@
+@use 'colors';
+
+.aura-page {
+  background: #f8f8f8;
+  min-height: 100vh;
+
+  .aura-page-env {
+    text-transform: uppercase;
+  }
+
+  .aura-page-nav {
+    top: 0;
+    position: fixed;
+    width: 100%;
+    z-index: 8;
+
+    .bp5-navbar {
+      padding: 0 20px;
+      background-color: colors.$aura-american-blue;
+      background: linear-gradient(colors.$aura-american-blue, colors.$aura-denim-blue 300%);
+
+      .bp5-button.bp5-minimal {
+        color: #f5f8fa;
+
+        &.bp5-outlined {
+          border-color: rgba(255, 255, 255, 0.4);
+          box-shadow: none;
+        }
+
+        .bp5-icon {
+          color: #a7b6c2;
+        }
+
+        &:hover .bp5-icon {
+          color: inherit;
+        }
+      }
+
+      .bp5-navbar-divider {
+        border-left-color: rgba(255, 255, 255, 0.15);
+      }
+
+      .bp5-tag {
+        background-color: #bfccd6;
+        color: #182026;
+
+        &.bp5-interactive {
+          &:hover {
+            background-color: rgba(191, 204, 214, 0.85);
+          }
+
+          &:active {
+            background-color: rgba(191, 204, 214, 0.7);
+          }
+        }
+      }
+    }
+  }
+
+  .aura-logo {
+    cursor: pointer;
+    margin-right: 10px;
+  }
+
+  .aura-page-bod {
+    display: block;
+    padding: 120px 20px 20px 20px;
+    min-width: 100vw;
+    z-index: 1;
+  }
+
+  .aura-page-head {
+    position: fixed;
+    top: 50px;
+    left: 0;
+    right: 0;
+    height: 50px;
+    background: linear-gradient(colors.$aura-gray, #f4f4f4);
+    box-shadow: 0 2px 2px -1px rgba(#bbb, 0.75);
+    display: flex;
+    align-items: center;
+    z-index: 11;
+
+    .aura-page-head-title {
+      margin: 0 20px;
+      line-height: 50px;
+    }
+
+    .aura-page-head-subnav {
+      flex-grow: 1;
+      padding-right: 20px;
+    }
+  }
+}
+
+ul.bp5-menu.aura-session-menu {
+  background-color: colors.$aura-night-blue;
+  background: linear-gradient(colors.$aura-night-blue, colors.$aura-denim-blue 300%);
+  color: #f5f8fa;
+
+  .bp5-button.bp5-minimal {
+    color: #f5f8fa;
+
+    &.bp5-outlined {
+      background: rgba(138, 155, 168, 0.3);
+    }
+
+    .bp5-icon {
+      color: #a7b6c2;
+    }
+
+    &:hover .bp5-icon {
+      color: inherit;
+    }
+  }
+
+  .bp5-menu-item.bp5-disabled {
+    color: #a7b6c2 !important;
+
+    & > .bp5-icon {
+      color: #a7b6c2 !important;
+    }
+  }
+
+  .bp5-menu-divider {
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .bp5-menu-item > .bp5-icon {
+    color: #a7b6c2;
+  }
+
+  .bp5-menu-item.bp5-intent-danger {
+    color: #ff7373;
+  }
+
+  .bp5-menu-item.bp5-intent-success {
+    color: #3dcc91;
+  }
+
+  .bp5-menu-item.bp5-intent-warning {
+    color: #ffb366;
+  }
+
+  .bp5-menu-item.bp5-intent-primary {
+    color: #48aff0;
+  }
+
+  .bp5-menu-item.bp5-intent-success,
+  .bp5-menu-item.bp5-intent-danger,
+  .bp5-menu-item.bp5-intent-warning,
+  .bp5-menu-item.bp5-intent-primary {
+    .bp5-icon {
+      color: inherit;
+    }
+
+    &:hover {
+      color: #fff;
+    }
+  }
+}

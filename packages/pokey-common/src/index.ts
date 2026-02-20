@@ -19,3 +19,7 @@ export type {
   PaginatedResponse,
   ErrorResponse,
 } from './types/api';
+
+// Utils
+export { UuidUtil } from './utils/uuid-util';
+export { DateTimeUtil } from './utils/datetime-util';

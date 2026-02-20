@@ -1,0 +1,41 @@
+.pokey-list-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.pokey-list-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.pokey-list-page-filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.pokey-list-page-actions {
+  flex-shrink: 0;
+}
+
+.pokey-list-page-pagination-top,
+.pokey-list-page-pagination-bottom {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pokey-list-page-table {
+  position: relative;
+  transition: opacity 0.15s ease;
+
+  &--loading {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}

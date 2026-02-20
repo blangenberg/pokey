@@ -8,7 +8,7 @@
 
 Pokey is a schema-driven configuration system. It is a TypeScript monorepo with three NPM workspace packages:
 
-- `packages/pokey-common` – Shared TypeScript types, enums, and API contracts
+- `packages/pokey-common` – Shared TypeScript types, enums, API contracts, and cross-package utility classes (`UuidUtil`, `DateTimeUtil`)
 - `packages/pokey-backend` – Express (local) / AWS Lambda (prod) serverless functions + DynamoDB
 - `packages/pokey-frontend` – React SPA (Vite)
 
@@ -23,7 +23,7 @@ Pokey is a schema-driven configuration system. It is a TypeScript monorepo with 
 ### Backend
 
 - **Adapter pattern**: Every handler is a pure function `(HandlerRequest) => Promise<HandlerResponse>`. Thin adapters convert between Lambda events / Express requests and this common shape. Never duplicate handler logic across adapters.
-- **Constructor dependency injection**: The `DataLayer`, `Observability`, `DateTimeUtil`, and `UuidUtil` are injected via `HandlerDependencies`. Never instantiate classes statically at module scope — it breaks testability.
+- **Constructor dependency injection**: The `DataLayer`, `Observability`, and shared utilities from `pokey-common` (`DateTimeUtil`, `UuidUtil`) are injected via `HandlerDependencies`. Never instantiate classes statically at module scope — it breaks testability.
 - **Observability in every handler**: Each handler must call `trackEvent`, `startTimer`, and handle errors via `logError`. Use the `MetricEvent` and `ErrorCode` enums from `pokey-common`.
 - **Ajv validation**: `additionalProperties` must always be `true` on stored schemas. Use `ensureAdditionalProperties()` when saving.
 - **Backward-compatibility on schema update**: Use `checkSchemaCompatibility()`. Adding optional properties is safe; removing required properties or changing types is not.
@@ -31,11 +31,25 @@ Pokey is a schema-driven configuration system. It is a TypeScript monorepo with 
 - **Express is for local dev only**. AWS SAM (`template.yaml`) is the production deployment framework.
 - **Ky for HTTP** (frontend). Do NOT use Axios.
 
+### Common
+
+- `UuidUtil` and `DateTimeUtil` live in `pokey-common` and are imported by both backend and frontend. Never duplicate them in individual packages.
+- Utility classes in common must be stateless wrappers with injectable behavior (no module-level singletons).
+
 ### Frontend
 
 - React with Vite.
-- Ladle for component stories (not Storybook).
+- BlueprintJS 5 for UI components.
+- Ladle for component stories (not Storybook). Every reusable component must have at least one Ladle story.
 - Ky as the HTTP client. Do not use Axios.
+- **File organization:**
+  - `pages/` -- Route-level page components and their page-specific stylesheets only. No business logic, no reusable components.
+  - `components/` -- Reusable or feature-specific UI components, grouped by feature (e.g. `components/schema-editor/`, `components/config-editor/`), with co-located stories and styles.
+  - `utils/` -- Pure, stateless functions and types with no React dependency, grouped by domain (e.g. `utils/schema/`, `utils/config/`). Every util file should have a co-located `.test.ts` file.
+  - `hooks/` -- Custom React hooks.
+  - `services/` -- Stateful or IO-bound modules (API client, auth, toaster).
+- **Dependency injection (frontend):** Same rule as backend -- never instantiate stateful classes (Ajv, UuidUtil) at module scope. Accept them as parameters with sensible defaults, or create fresh instances per function call.
+- **No inline business logic in components.** Extract stateless logic into `utils/` pure functions. Extract stateful logic into `hooks/`.
 
 ## TypeScript Rules
 
@@ -49,12 +63,14 @@ Pokey is a schema-driven configuration system. It is a TypeScript monorepo with 
 ## Coding Style
 
 - **SCREAMING_SNAKE_CASE** for all TypeScript enum members. Values have no defined style. Example: `SchemaStatus.ACTIVE = 'active'`, `ErrorCode.SCHEMA_NOT_FOUND = 'SCHEMA_NOT_FOUND'`.
-- **camelCase** for variables, functions, and file names.
+- **camelCase** for variables and functions.
+- **File naming:** kebab-case for all files and directories (e.g. `schema-types.ts`, `use-pagination.ts`, `config-helpers.test.ts`). The only exception is React component `.tsx` files, which use PascalCase to match the exported component name (e.g. `TreeNode.tsx`, `SchemaEditor.tsx`). Stories and tests follow their source file's convention (`TreeNode.stories.tsx`, `schema-types.test.ts`).
 - **Prettier** with 140 character width. Config is in `.prettierrc`.
 - **ESLint** with `typescript-eslint` strict type-checked config. Config is in `eslint.config.mjs`.
 - **Husky + lint-staged** runs ESLint and Prettier on pre-commit.
 - Stateless business logic should be extracted into helper functions, especially when reused.
 - Never initialize classes statically in file scope. Always use factory functions or constructor injection.
+- Shared DI primitives (`UuidUtil`, `DateTimeUtil`) must be imported from `pokey-common`, never redefined locally. Functions that need non-deterministic behavior (ID generation, timestamps) must accept these as injectable parameters.
 
 ## Testing
 
@@ -62,6 +78,9 @@ Pokey is a schema-driven configuration system. It is a TypeScript monorepo with 
 - Backend handler tests use `createMockDependencies()` from `__tests__/helpers/mock-dependencies.ts`.
 - Test files are exempt from explicit-function-return-type.
 - Unit test stateless helpers (schema compatibility, pagination, etc.) and handler functions (with mocked dependencies).
+- Frontend reusable components must have Ladle stories covering key states.
+- Frontend `utils/` functions must have co-located unit tests (`.test.ts` next to the source file).
+- Use injected `UuidUtil` (or mocks) in tests for deterministic assertions -- never rely on `crypto.randomUUID()` in test code.
 
 ## Status Codes
 
@@ -75,20 +94,47 @@ Pokey is a schema-driven configuration system. It is a TypeScript monorepo with 
 ## File Organization
 
 ```
-packages/pokey-backend/src/
-  adapters/              – lambda-adapter, express-adapter, shared types
-  handlers/
-    schema-handlers/     – get, list, create, update, disable, activate
-    config-handlers/     – get, list, create, update, disable, activate
-  lambda/                – Lambda entry points (thin wiring, not tested directly)
-  routes/                – Express route registration
-  utils/                 – DateTimeUtil, UuidUtil, handler-dependency-util, pagination, schema-compatibility, ensure-additional-properties
-  constants.ts           – Table names, region, limits
-  data-layer.ts          – DataLayer (DynamoDB abstraction)
-  observability.ts       – Observability (metrics, error logging)
-  index.ts               – Express dev server entry point
+packages/pokey-common/src/
+  enums/               – SchemaStatus, ConfigStatus, ErrorCode, MetricEvent
+  types/               – Schema, Config, API request/response types
+  utils/               – UuidUtil, DateTimeUtil
+  index.ts             – barrel export
 
-scripts/                 - initialization scripts for node, podman, and DynamoDB
+packages/pokey-backend/src/
+  adapters/            – lambda-adapter, express-adapter, shared types
+  handlers/
+    schema-handlers/   – get, list, create, update, disable, activate
+    config-handlers/   – get, list, create, update, disable, activate
+  lambda/              – Lambda entry points (thin wiring, not tested directly)
+  routes/              – Express route registration
+  utils/               – handler-dependency-util, pagination, schema-compatibility, ensure-additional-properties
+  constants.ts         – Table names, region, limits
+  data-layer.ts        – DataLayer (DynamoDB abstraction)
+  observability.ts     – Observability (metrics, error logging)
+  index.ts             – Express dev server entry point
+
+packages/pokey-frontend/src/
+  pages/               – Route-level page components + page-specific styles only
+    schemas/           – SchemaList, SchemaEditor
+    configs/           – ConfigList, ConfigEditor
+  components/          – Reusable UI components grouped by feature
+    schema-editor/     – TreeNode, PropertyPanel, EditJsonModal + stories + styles
+    config-editor/     – DynamicFormRenderer, ArrayField + stories + styles
+    shared/            – PaginationControls, StatusToggle, ListPage, SchemaSelector, ErrorBoundary
+    Page/              – App shell (header, sub-header)
+    Logo/              – Logo component
+    AuthGuard/         – Authentication wrapper
+    OktaSignin/        – Okta PKCE flow initiation
+    OktaRedirectHandler/ – Okta callback handler
+  utils/               – Pure stateless functions + types (with co-located tests)
+    schema/            – schema-types, schema-mapping, schema-reducer, schema-validation
+    config/            – config-helpers, field-renderer
+    list-params.ts, status-helpers.ts (shared across domains)
+  hooks/               – Custom React hooks (use-auth, use-pagination, use-schema-search, use-schema-name-cache)
+  services/            – API client, auth service, toaster
+  styles/              – Global SCSS
+
+scripts/               – initialization scripts for node, podman, and DynamoDB
 ```
 
 ## Do Not Modify

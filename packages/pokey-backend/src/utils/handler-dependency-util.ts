@@ -1,7 +1,6 @@
 import { DataLayer } from '../data-layer';
 import { Observability } from '../observability';
-import { DateTimeUtil } from './datetime-util';
-import { UuidUtil } from './uuid-util';
+import { DateTimeUtil, UuidUtil } from 'pokey-common';
 import { DEFAULT_REGION, LOCAL_DYNAMODB_ENDPOINT } from '../constants';
 import type { HandlerDependencies } from '../adapters/types';
 

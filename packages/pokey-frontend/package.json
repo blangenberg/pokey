@@ -11,10 +11,18 @@
     "ladle:build": "ladle build"
   },
   "dependencies": {
+    "@blueprintjs/core": "^5.19.1",
+    "@blueprintjs/icons": "^5.23.0",
+    "@blueprintjs/select": "^5.3.21",
+    "@blueprintjs/table": "^5.3.15",
+    "ajv": "^6.12.6",
     "ky": "^1.7.0",
+    "oauth4webapi": "^3.8.5",
     "pokey-common": "*",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.13.0",
+    "sass": "^1.97.3"
   },
   "devDependencies": {
     "@ladle/react": "^4.0.0",
