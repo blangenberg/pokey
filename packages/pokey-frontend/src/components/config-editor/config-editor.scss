@@ -5,6 +5,29 @@
   padding: 16px;
 }
 
+.pokey-config-editor-schema-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  max-width: 500px;
+}
+
+.pokey-config-editor-schema-label {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.pokey-config-editor-schema-info {
+  font-size: 13px;
+}
+
+.pokey-config-editor-schema-id {
+  font-family: monospace;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
 .pokey-config-editor-topbar {
   display: flex;
   justify-content: space-between;

@@ -61,13 +61,11 @@ export const ArrayField = React.memo(function ArrayField({
 
   return (
     <Card style={{ marginBottom: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <UnorderedListOutlined style={{ fontSize: 14 }} />
-          <strong>{fieldName}</strong>
-          {isRequired && <span style={{ color: '#db3737' }}>*</span>}
-          <span style={{ opacity: 0.5, fontSize: 12 }}>({String(items.length)} items)</span>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <UnorderedListOutlined style={{ fontSize: 14 }} />
+        <strong>{fieldName}</strong>
+        {isRequired && <span style={{ color: '#db3737' }}>*</span>}
+        <span style={{ opacity: 0.5, fontSize: 12 }}>({String(items.length)} items)</span>
         <Button icon={<PlusOutlined />} size="small" onClick={handleAdd} disabled={!canAdd} aria-label={`Add ${fieldName} item`}>
           Add Item
         </Button>

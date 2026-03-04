@@ -15,20 +15,21 @@ interface DynamicFormRendererProps {
 
 function FormFieldWrapper({
   label,
-  helperText,
+  description,
   error,
   children,
 }: {
   label: React.ReactNode | null;
-  helperText: string | undefined;
+  description: string | undefined;
   error: string | undefined;
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
     <div style={{ marginBottom: 16 }}>
       {label != null && <div style={{ marginBottom: 4 }}>{label}</div>}
+      {description && <div style={{ color: '#999', fontSize: 12, marginBottom: 4 }}>{description}</div>}
       {children}
-      <div style={{ color: error ? '#ff4d4f' : '#999', fontSize: 12, marginTop: 4 }}>{helperText}</div>
+      {error && <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 4 }}>{error}</div>}
     </div>
   );
 }
@@ -122,7 +123,7 @@ const FieldRenderer = React.memo(function FieldRenderer({
     const selectValue = typeof value === 'string' ? value : typeof defaultValue === 'string' ? defaultValue : '';
     const options = [{ value: '', label: 'Select...' }, ...(enumValues ?? []).map((v) => ({ value: String(v), label: String(v) }))];
     return (
-      <FormFieldWrapper label={label} helperText={error ?? description} error={error}>
+      <FormFieldWrapper label={label} description={description} error={error}>
         <Select
           value={selectValue}
           onChange={(v): void => {
@@ -131,6 +132,7 @@ const FieldRenderer = React.memo(function FieldRenderer({
           options={options}
           aria-label={fieldName}
           style={{ width: '100%' }}
+          status={error ? 'error' : undefined}
         />
       </FormFieldWrapper>
     );
@@ -140,7 +142,7 @@ const FieldRenderer = React.memo(function FieldRenderer({
     if (controlType === 'date-input') {
       const dateValue = typeof value === 'string' ? value : typeof defaultValue === 'string' ? defaultValue : '';
       return (
-        <FormFieldWrapper label={label} helperText={error ?? description} error={error}>
+        <FormFieldWrapper label={label} description={description} error={error}>
           <Input
             type="datetime-local"
             value={dateValue}
@@ -156,7 +158,7 @@ const FieldRenderer = React.memo(function FieldRenderer({
 
     const textValue = typeof value === 'string' ? value : typeof defaultValue === 'string' ? defaultValue : '';
     return (
-      <FormFieldWrapper label={label} helperText={error ?? description} error={error}>
+      <FormFieldWrapper label={label} description={description} error={error}>
         {controlType === 'textarea' ? (
           <Input.TextArea
             value={textValue}
@@ -189,7 +191,7 @@ const FieldRenderer = React.memo(function FieldRenderer({
     const numValue = typeof value === 'number' ? value : typeof defaultValue === 'number' ? defaultValue : undefined;
 
     return (
-      <FormFieldWrapper label={label} helperText={error ?? description} error={error}>
+      <FormFieldWrapper label={label} description={description} error={error}>
         <InputNumber
           value={numValue}
           onChange={(v): void => {
@@ -209,8 +211,8 @@ const FieldRenderer = React.memo(function FieldRenderer({
   if (controlType === 'boolean-switch') {
     const boolValue = typeof value === 'boolean' ? value : typeof defaultValue === 'boolean' ? defaultValue : false;
     return (
-      <FormFieldWrapper label={null} helperText={error ?? description} error={error}>
-        <div>
+      <FormFieldWrapper label={label} description={description} error={error}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Switch
             checked={boolValue}
             onChange={(checked): void => {
@@ -218,7 +220,7 @@ const FieldRenderer = React.memo(function FieldRenderer({
             }}
             aria-label={fieldName}
           />
-          <span style={{ marginLeft: 8 }}>{displayLabel}</span>
+          <span>{boolValue ? 'True' : 'False'}</span>
         </div>
       </FormFieldWrapper>
     );
@@ -272,7 +274,7 @@ const FieldRenderer = React.memo(function FieldRenderer({
 
   const fallbackValue = typeof value === 'string' ? value : JSON.stringify(value ?? '');
   return (
-    <FormFieldWrapper label={label} helperText={error ?? description ?? 'Unsupported field type'} error={error}>
+    <FormFieldWrapper label={label} description={description ?? 'Unsupported field type'} error={error}>
       <Input
         value={fallbackValue}
         onChange={(e): void => {

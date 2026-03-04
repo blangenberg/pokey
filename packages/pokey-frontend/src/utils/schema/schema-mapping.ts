@@ -99,6 +99,7 @@ export function jsonSchemaToTree(schema: JsonSchema, name?: string, uuid: UuidUt
 
   for (const [key, value] of Object.entries(schema)) {
     if (STRUCTURAL_KEYWORDS.has(key)) continue;
+    if (key === 'title') continue;
     if (KNOWN_KEYWORDS.has(key)) {
       keywords[key] = value;
     } else {
@@ -168,7 +169,7 @@ export function jsonSchemaToTree(schema: JsonSchema, name?: string, uuid: UuidUt
     }
   }
 
-  const displayName = name ?? (schema.title as string | undefined) ?? 'Schema';
+  const displayName = (schema.title as string | undefined) ?? name ?? 'Schema';
 
   return {
     id: uuid.generate(),
@@ -204,6 +205,10 @@ function buildSchemaNode(node: SchemaNode): JsonSchema {
 
   if (node.type) {
     schema.type = node.type;
+  }
+
+  if (node.displayName && node.displayName !== node.name && !node.name.startsWith('(') && node.name !== 'schema') {
+    schema.title = node.displayName;
   }
 
   for (const [key, value] of Object.entries(node.keywords)) {

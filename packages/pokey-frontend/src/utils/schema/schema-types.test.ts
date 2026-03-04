@@ -16,7 +16,7 @@ function createMockUuid(ids: string[]): UuidUtil {
 describe('createEmptyNode', () => {
   it('produces correct structure with injected UUID', () => {
     const mockUuid = createMockUuid(['test-id-001']);
-    const node = createEmptyNode('string', 'userName', mockUuid);
+    const node = createEmptyNode('string', 'userName', undefined, mockUuid);
 
     expect(node.id).toBe('test-id-001');
     expect(node.name).toBe('userName');
@@ -31,7 +31,7 @@ describe('createEmptyNode', () => {
 
   it('creates object nodes with empty children array', () => {
     const mockUuid = createMockUuid(['obj-id']);
-    const node = createEmptyNode('object', 'address', mockUuid);
+    const node = createEmptyNode('object', 'address', undefined, mockUuid);
 
     expect(node.type).toBe('object');
     expect(node.children).toEqual([]);

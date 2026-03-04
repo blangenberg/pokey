@@ -26,15 +26,12 @@ export const SchemaSelector = React.memo(function SchemaSelector({
   disabled,
   placeholder = 'Search schemas...',
 }: SchemaSelectorProps): React.JSX.Element {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(value?.name ?? '');
   const { results: items, loading, search } = useSchemaSearch({ statusFilter });
 
   useEffect((): void => {
-    setQuery(value?.name ?? '');
-  }, [value?.name]);
-
-  useEffect((): void => {
     if (value?.name && value.name.length >= MIN_QUERY_LENGTH) {
+      setQuery(value.name);
       search(value.name);
     }
   }, [value?.name, search]);
@@ -43,11 +40,8 @@ export const SchemaSelector = React.memo(function SchemaSelector({
     (searchText: string): void => {
       setQuery(searchText);
       search(searchText);
-      if (searchText === '' && value) {
-        onSelect(null);
-      }
     },
-    [search, value, onSelect],
+    [search],
   );
 
   const handleSelect = useCallback(
@@ -55,7 +49,7 @@ export const SchemaSelector = React.memo(function SchemaSelector({
       const item = items.find((i) => i.id === selectedValue);
       if (item) {
         onSelect(item);
-        setQuery(item.name);
+        setQuery('');
       }
     },
     [items, onSelect],

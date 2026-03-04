@@ -204,6 +204,37 @@ describe('validateConfigData', () => {
     expect(errorsInvalid.has('/color')).toBe(true);
   });
 
+  it('treats empty strings as missing for required fields', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+      },
+      required: ['name'],
+    };
+
+    const errors = validateConfigData(schema, { name: '' });
+    expect(errors.size).toBeGreaterThan(0);
+  });
+
+  it('treats empty strings as missing in nested required fields', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        address: {
+          type: 'object',
+          properties: {
+            city: { type: 'string' },
+          },
+          required: ['city'],
+        },
+      },
+    };
+
+    const errors = validateConfigData(schema, { address: { city: '' } });
+    expect(errors.size).toBeGreaterThan(0);
+  });
+
   it('handles complex schemas with multiple errors', () => {
     const schema = {
       type: 'object',

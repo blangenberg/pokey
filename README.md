@@ -16,7 +16,7 @@ A flexible, schema-driven configuration system for front-end content. Define JSO
 
 | Layer         | Technology                                   |
 | ------------- | -------------------------------------------- |
-| Frontend      | React 19, Vite, Ladle, Ky                    |
+| Frontend      | React 19, Vite, Ant Design, Ladle, Ky        |
 | Backend       | Node 22, Express (local), AWS Lambda (prod)  |
 | Database      | DynamoDB (local via `amazon/dynamodb-local`) |
 | Validation    | Ajv (JSON Schema)                            |

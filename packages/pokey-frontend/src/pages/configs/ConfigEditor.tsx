@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useBlocker } from 'react-router-dom';
+import { useNavigate, useParams, useBlocker, useLocation } from 'react-router-dom';
 import { Button, Input, Spin, Modal, Result } from 'antd';
-import { SaveOutlined, DatabaseOutlined } from '@ant-design/icons';
+import { SaveOutlined, CheckOutlined, CloseOutlined, CopyOutlined, DatabaseOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
 import { StatusToggle } from '../../components/shared/StatusToggle';
 import { SchemaSelector } from '../../components/shared/SchemaSelector';
 import { DynamicFormRenderer } from '../../components/config-editor/DynamicFormRenderer';
@@ -23,6 +23,7 @@ interface SchemaOption {
 export function ConfigEditor(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const isEditMode = Boolean(id);
 
   const [configName, setConfigName] = useState('');
@@ -36,6 +37,8 @@ export function ConfigEditor(): React.JSX.Element {
   const [validationErrors, setValidationErrors] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
+  const [showSchemaSearch, setShowSchemaSearch] = useState(true);
+  const [schemaPreviewOpen, setSchemaPreviewOpen] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const skipBlockRef = useRef(false);
@@ -56,7 +59,41 @@ export function ConfigEditor(): React.JSX.Element {
 
   useEffect(() => {
     if (!isEditMode) {
-      setSavedState(JSON.stringify({ name: '', schemaId: undefined, data: {} }));
+      const incoming =
+        (location.state as {
+          schemaId?: string;
+          schemaName?: string;
+          cloneData?: Record<string, unknown>;
+          cloneName?: string;
+        } | null) ?? {};
+      if (incoming.schemaId) {
+        const schemaOption: SchemaOption = { id: incoming.schemaId, name: incoming.schemaName ?? incoming.schemaId, status: 'active' };
+        setSelectedSchema(schemaOption);
+        setShowSchemaSearch(false);
+        void (async (): Promise<void> => {
+          try {
+            const schema = await api.get(`schemas/${incoming.schemaId as string}`).json<Schema>();
+            setSchemaData(schema.schemaData as JsonSchema);
+            if (incoming.cloneData) {
+              setFormData(incoming.cloneData);
+            } else {
+              setFormData(buildDefaults(schema.schemaData as JsonSchema));
+            }
+          } catch {
+            showErrorToast('Failed to load schema.');
+          }
+        })();
+      }
+      if (incoming.cloneName) {
+        setConfigName(`${incoming.cloneName} (copy)`);
+      }
+      setSavedState(
+        JSON.stringify({
+          name: incoming.cloneName ? `${incoming.cloneName} (copy)` : '',
+          schemaId: incoming.schemaId,
+          data: incoming.cloneData ?? {},
+        }),
+      );
       return;
     }
 
@@ -98,8 +135,11 @@ export function ConfigEditor(): React.JSX.Element {
     if (!schema) {
       setSchemaData(null);
       setFormData({});
+      setShowSchemaSearch(true);
       return;
     }
+
+    setShowSchemaSearch(false);
 
     try {
       const fullSchema = await api.get(`schemas/${schema.id}`).json<Schema>();
@@ -123,6 +163,19 @@ export function ConfigEditor(): React.JSX.Element {
     setValidationErrors(new Map());
     return true;
   }, [schemaData, formData]);
+
+  const handleValidate = useCallback((): void => {
+    if (!schemaData) {
+      showWarningToast('Select a schema first.');
+      return;
+    }
+    const valid = runValidation();
+    if (valid) {
+      showSuccessToast('Config is valid.');
+    } else {
+      showWarningToast('Config has validation errors.');
+    }
+  }, [schemaData, runValidation]);
 
   const handleSave = useCallback(async (): Promise<void> => {
     if (!runValidation()) {
@@ -185,6 +238,49 @@ export function ConfigEditor(): React.JSX.Element {
 
   return (
     <div className="pokey-config-editor">
+      {showSchemaSearch && !isEditMode ? (
+        <div className="pokey-config-editor-schema-row">
+          <span className="pokey-config-editor-schema-label">Schema:</span>
+          <SchemaSelector
+            value={selectedSchema}
+            onSelect={(schema): void => {
+              void handleSchemaSelect(schema);
+            }}
+            statusFilter="active"
+            placeholder="Search schemas..."
+          />
+        </div>
+      ) : selectedSchema ? (
+        <div className="pokey-config-editor-schema-row">
+          <span className="pokey-config-editor-schema-label">Schema:</span>
+          <span className="pokey-config-editor-schema-info">
+            {selectedSchema.name} <span className="pokey-config-editor-schema-id">({selectedSchema.id})</span>
+          </span>
+          {schemaData && (
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={(): void => {
+                setSchemaPreviewOpen(true);
+              }}
+              aria-label="View schema JSON"
+            />
+          )}
+          {!isEditMode && (
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={(): void => {
+                setShowSchemaSearch(true);
+              }}
+              aria-label="Change schema"
+            />
+          )}
+        </div>
+      ) : null}
+
       <div className="pokey-config-editor-topbar">
         <div className="pokey-config-editor-topbar-left">
           <Input
@@ -197,27 +293,30 @@ export function ConfigEditor(): React.JSX.Element {
             aria-label="Config name"
             style={{ maxWidth: 300 }}
           />
-          {isEditMode ? (
-            <Input
-              value={selectedSchema?.name ?? ''}
-              readOnly
-              prefix={<DatabaseOutlined />}
-              aria-label="Schema"
-              style={{ maxWidth: 250 }}
-            />
-          ) : (
-            <SchemaSelector
-              value={selectedSchema}
-              onSelect={(schema): void => {
-                void handleSchemaSelect(schema);
-              }}
-              statusFilter="active"
-              placeholder="Select schema..."
-            />
-          )}
           {isEditMode && <StatusToggle status={configStatus} onToggle={handleStatusToggle} />}
+          {isEditMode && selectedSchema && (
+            <Button
+              icon={<CopyOutlined />}
+              onClick={(): void => {
+                skipBlockRef.current = true;
+                void navigate('/configs/new', {
+                  state: {
+                    schemaId: selectedSchema.id,
+                    schemaName: selectedSchema.name,
+                    cloneData: formData,
+                    cloneName: configName,
+                  },
+                });
+              }}
+            >
+              Clone
+            </Button>
+          )}
         </div>
         <div className="pokey-config-editor-topbar-right">
+          <Button icon={<CheckOutlined />} onClick={handleValidate}>
+            Validate
+          </Button>
           <Button
             type="primary"
             icon={<SaveOutlined />}
@@ -231,12 +330,12 @@ export function ConfigEditor(): React.JSX.Element {
             {saving ? 'Saving...' : 'Save Config'}
           </Button>
           <Button
-            type="text"
+            icon={<CloseOutlined />}
             onClick={(): void => {
               void navigate('/configs');
             }}
           >
-            Cancel
+            Close
           </Button>
         </div>
       </div>
@@ -248,6 +347,23 @@ export function ConfigEditor(): React.JSX.Element {
           <DynamicFormRenderer schema={schemaData} data={formData} onChange={handleFormChange} errors={validationErrors} />
         )}
       </div>
+
+      <Modal
+        open={schemaPreviewOpen}
+        title={`Schema: ${selectedSchema?.name ?? ''}`}
+        footer={null}
+        onCancel={(): void => {
+          setSchemaPreviewOpen(false);
+        }}
+        width={700}
+      >
+        <Input.TextArea
+          value={schemaData ? JSON.stringify(schemaData, null, 2) : ''}
+          readOnly
+          style={{ fontFamily: '"Roboto Mono", monospace', fontSize: 13, minHeight: 400, width: '100%' }}
+          aria-label="Schema JSON"
+        />
+      </Modal>
 
       <Modal
         open={blocker.state === 'blocked'}

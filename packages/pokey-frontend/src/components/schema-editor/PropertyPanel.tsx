@@ -19,23 +19,6 @@ interface PropertyPanelProps {
   nodePath?: SchemaNode[];
 }
 
-const STRING_FORMAT_OPTIONS = [
-  { value: '', label: 'None' },
-  { value: 'email', label: 'email' },
-  { value: 'uri', label: 'uri' },
-  { value: 'uri-reference', label: 'uri-reference' },
-  { value: 'date', label: 'date' },
-  { value: 'date-time', label: 'date-time' },
-  { value: 'time', label: 'time' },
-  { value: 'hostname', label: 'hostname' },
-  { value: 'ipv4', label: 'ipv4' },
-  { value: 'ipv6', label: 'ipv6' },
-  { value: 'uuid', label: 'uuid' },
-  { value: 'json-pointer', label: 'json-pointer' },
-  { value: 'relative-json-pointer', label: 'relative-json-pointer' },
-  { value: 'regex', label: 'regex' },
-];
-
 function FormField({
   label,
   helperText,
@@ -272,7 +255,24 @@ export const PropertyPanel = React.memo(function PropertyPanel({
                   />
                 )}
 
-                {node.type && node.type !== 'object' && node.type !== 'array' && (
+                {node.type === 'boolean' && (
+                  <FormField label="Default Value">
+                    <Select
+                      value={node.keywords.default === false ? 'false' : 'true'}
+                      onChange={(v): void => {
+                        updateKeyword('default', v === 'true');
+                      }}
+                      options={[
+                        { value: 'true', label: 'True' },
+                        { value: 'false', label: 'False' },
+                      ]}
+                      style={{ width: '100%' }}
+                      aria-label="Default value"
+                    />
+                  </FormField>
+                )}
+
+                {node.type === 'string' && (
                   <FormField label="Enum (allowed values)">
                     <Select
                       mode="tags"
@@ -371,17 +371,6 @@ function renderValidationSection(
           aria-label="Pattern"
         />
       </FormField>
-      <FormField label="Format">
-        <Select
-          value={(keywords.format as string | undefined) ?? ''}
-          onChange={(v): void => {
-            updateKeyword('format', v || undefined);
-          }}
-          options={STRING_FORMAT_OPTIONS}
-          style={{ width: '100%' }}
-          aria-label="Format"
-        />
-      </FormField>
     </div>
   );
 
@@ -425,17 +414,6 @@ function renderValidationSection(
           }}
           style={{ width: '100%' }}
           aria-label="Exclusive Maximum"
-        />
-      </FormField>
-      <FormField label="Multiple Of">
-        <InputNumber
-          value={keywords.multipleOf as number | undefined}
-          onChange={(v: number | null): void => {
-            updateKeyword('multipleOf', v === null || Number.isNaN(v) ? undefined : v);
-          }}
-          min={0}
-          style={{ width: '100%' }}
-          aria-label="Multiple Of"
         />
       </FormField>
     </div>

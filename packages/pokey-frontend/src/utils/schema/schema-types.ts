@@ -36,11 +36,24 @@ export interface SchemaEditorState {
 
 const defaultUuid = new UuidUtil();
 
-export function createEmptyNode(type: SchemaNodeType, name: string, uuid: UuidUtil = defaultUuid): SchemaNode {
+const TYPE_DISPLAY_LABELS: Record<SchemaNodeType, string> = {
+  string: 'Text',
+  number: 'Number',
+  integer: 'Integer',
+  boolean: 'True / False',
+  object: 'Object',
+  array: 'List',
+};
+
+export function getTypeDisplayName(type: SchemaNodeType): string {
+  return TYPE_DISPLAY_LABELS[type];
+}
+
+export function createEmptyNode(type: SchemaNodeType, name: string, displayName?: string, uuid: UuidUtil = defaultUuid): SchemaNode {
   return {
     id: uuid.generate(),
     name,
-    displayName: name,
+    displayName: displayName ?? name,
     type,
     required: true,
     keywords: {},

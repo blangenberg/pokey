@@ -418,7 +418,7 @@ describe('jsonSchemaToTree — property attributes', () => {
     expect(tree.displayName).toBe('My Schema');
   });
 
-  it('uses property name as displayName when provided', () => {
+  it('uses title as displayName when title is present', () => {
     const schema = {
       type: 'object',
       properties: {
@@ -427,8 +427,21 @@ describe('jsonSchemaToTree — property attributes', () => {
     };
 
     const tree = jsonSchemaToTree(schema);
-    expect(tree.children[0]?.displayName).toBe('userName');
-    expect(tree.children[0]?.title).toBe('User Name');
+    expect(tree.children[0]?.name).toBe('userName');
+    expect(tree.children[0]?.displayName).toBe('User Name');
+  });
+
+  it('falls back to property key as displayName when no title', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        bgColor: { type: 'string' },
+      },
+    };
+
+    const tree = jsonSchemaToTree(schema);
+    expect(tree.children[0]?.name).toBe('bgColor');
+    expect(tree.children[0]?.displayName).toBe('bgColor');
   });
 });
 

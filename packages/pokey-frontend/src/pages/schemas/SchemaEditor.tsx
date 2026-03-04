@@ -6,6 +6,7 @@ import {
   CloseOutlined,
   CodeOutlined,
   CopyOutlined,
+  FileAddOutlined,
   SaveOutlined,
   PlusOutlined,
   FontSizeOutlined,
@@ -30,8 +31,8 @@ import {
   hasDuplicateSiblingNames,
   getUniqueSiblingName,
 } from '../../utils/schema/schema-reducer';
-import { jsonSchemaToTree, treeToJsonSchema } from '../../utils/schema/schema-mapping';
-import { createEmptyNode, createCompositionNode, createRootNode } from '../../utils/schema/schema-types';
+import { jsonSchemaToTree, treeToJsonSchema, displayNameToId } from '../../utils/schema/schema-mapping';
+import { createEmptyNode, createCompositionNode, createRootNode, getTypeDisplayName } from '../../utils/schema/schema-types';
 import type { SchemaNodeType, CompositionKind, SchemaNode } from '../../utils/schema/schema-types';
 import { api } from '../../services/api';
 import { showSuccessToast, showErrorToast, showWarningToast } from '../../services/toaster';
@@ -202,16 +203,16 @@ export function SchemaEditor(): React.JSX.Element {
           showWarningToast('This list already has an item schema defined. Remove it first to change the item type.');
           return;
         }
-        const node = createEmptyNode(type, '(items)');
-        node.displayName = 'List Type';
+        const node = createEmptyNode(type, '(items)', 'List Type');
         node.required = false;
         dispatch({ type: 'ADD_NODE', payload: { parentId, node } });
         return;
       }
 
-      const baseName = `new${type.charAt(0).toUpperCase()}${type.slice(1)}`;
-      const uniqueName = getUniqueSiblingName(baseName, actualParent.children);
-      const node = createEmptyNode(type, uniqueName);
+      const baseDisplayName = `New ${getTypeDisplayName(type)}`;
+      const baseId = displayNameToId(baseDisplayName);
+      const uniqueId = getUniqueSiblingName(baseId, actualParent.children);
+      const node = createEmptyNode(type, uniqueId, baseDisplayName);
       dispatch({ type: 'ADD_NODE', payload: { parentId, node } });
     },
     [state.selectedNodeId, state.root],
@@ -392,15 +393,26 @@ export function SchemaEditor(): React.JSX.Element {
             <Button icon={<PlusOutlined />}>Add Element</Button>
           </Dropdown>
           {isEditMode && (
-            <Button
-              icon={<CopyOutlined />}
-              onClick={(): void => {
-                skipBlockRef.current = true;
-                void navigate('/schemas/new', { state: { cloneSchema: treeToJsonSchema(state.root), cloneName: schemaName } });
-              }}
-            >
-              Clone
-            </Button>
+            <>
+              <Button
+                icon={<CopyOutlined />}
+                onClick={(): void => {
+                  skipBlockRef.current = true;
+                  void navigate('/schemas/new', { state: { cloneSchema: treeToJsonSchema(state.root), cloneName: schemaName } });
+                }}
+              >
+                Clone
+              </Button>
+              <Button
+                icon={<FileAddOutlined />}
+                onClick={(): void => {
+                  skipBlockRef.current = true;
+                  void navigate('/configs/new', { state: { schemaId: id, schemaName } });
+                }}
+              >
+                Create Config
+              </Button>
+            </>
           )}
         </div>
         <div className="pokey-schema-editor-topbar-right">

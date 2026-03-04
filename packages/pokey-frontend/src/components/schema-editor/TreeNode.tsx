@@ -140,7 +140,7 @@ export const TreeNodeComponent = React.memo(function TreeNodeComponent({
 
         {node.required && (
           <Tooltip title="Required" mouseEnterDelay={0.15}>
-            <span className="pokey-tree-node-required">●</span>
+            <span className="pokey-tree-node-required">*</span>
           </Tooltip>
         )}
 

@@ -39,7 +39,7 @@ Pokey is a schema-driven configuration system. It is a TypeScript monorepo with 
 ### Frontend
 
 - React with Vite.
-- BlueprintJS 5 for UI components.
+- Ant Design (antd) for UI components.
 - Ladle for component stories (not Storybook). Every reusable component must have at least one Ladle story.
 - Ky as the HTTP client. Do not use Axios.
 - **File organization:**
