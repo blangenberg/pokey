@@ -2,6 +2,26 @@
 
 .pokey-schema-table {
   width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    border: 1px solid $aura-gray;
+    padding: 8px 12px;
+    text-align: left;
+  }
+
+  thead th {
+    background: $aura-cool-gray;
+  }
+
+  tbody tr:nth-child(even) {
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+  tbody tr:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
 }
 
 .pokey-schema-row {

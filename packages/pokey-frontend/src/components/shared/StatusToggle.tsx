@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Switch } from '@blueprintjs/core';
+import { Switch } from 'antd';
 import { showErrorToast } from '../../services/toaster';
 
 interface StatusToggleProps {
@@ -25,7 +25,7 @@ export const StatusToggle = React.memo(function StatusToggle({ status, onToggle,
       await onToggle(newStatus);
     } catch {
       setOptimisticStatus(status);
-      void showErrorToast('Failed to update status. Please try again.');
+      showErrorToast('Failed to update status. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -34,15 +34,18 @@ export const StatusToggle = React.memo(function StatusToggle({ status, onToggle,
   const isActive = optimisticStatus === 'active';
 
   return (
-    <Switch
-      checked={isActive}
-      label={isActive ? 'Active' : 'Disabled'}
-      intent={isActive ? 'success' : 'danger'}
-      disabled={disabled || loading}
-      onChange={(): void => {
-        void handleToggle();
-      }}
-      aria-label={`Status: ${isActive ? 'active' : 'disabled'}`}
-    />
+    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }} aria-label={`Status: ${isActive ? 'active' : 'disabled'}`}>
+      <Switch
+        checked={isActive}
+        checkedChildren="Active"
+        unCheckedChildren="Disabled"
+        disabled={disabled || loading}
+        loading={loading}
+        onChange={(): void => {
+          void handleToggle();
+        }}
+        style={isActive ? { backgroundColor: '#52c41a' } : undefined}
+      />
+    </label>
   );
 });

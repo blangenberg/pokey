@@ -42,7 +42,7 @@ export function createEmptyNode(type: SchemaNodeType, name: string, uuid: UuidUt
     name,
     displayName: name,
     type,
-    required: false,
+    required: true,
     keywords: {},
     extraKeywords: {},
     children: [],
@@ -75,8 +75,8 @@ export function createCompositionNode(kind: CompositionKind, name: string, uuid:
 export function createRootNode(uuid: UuidUtil = defaultUuid): SchemaNode {
   return {
     id: uuid.generate(),
-    name: 'root',
-    displayName: 'Root',
+    name: 'schema',
+    displayName: 'Schema',
     type: 'object',
     required: false,
     keywords: {},

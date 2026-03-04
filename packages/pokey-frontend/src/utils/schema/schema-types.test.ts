@@ -22,7 +22,7 @@ describe('createEmptyNode', () => {
     expect(node.name).toBe('userName');
     expect(node.displayName).toBe('userName');
     expect(node.type).toBe('string');
-    expect(node.required).toBe(false);
+    expect(node.required).toBe(true);
     expect(node.keywords).toEqual({});
     expect(node.extraKeywords).toEqual({});
     expect(node.children).toEqual([]);
@@ -85,8 +85,8 @@ describe('createRootNode', () => {
     const node = createRootNode(mockUuid);
 
     expect(node.id).toBe('root-id');
-    expect(node.name).toBe('root');
-    expect(node.displayName).toBe('Root');
+    expect(node.name).toBe('schema');
+    expect(node.displayName).toBe('Schema');
     expect(node.type).toBe('object');
     expect(node.children).toEqual([]);
     expect(node.expanded).toBe(true);

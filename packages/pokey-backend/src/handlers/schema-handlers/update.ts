@@ -1,7 +1,7 @@
 import Ajv from 'ajv';
-import { ErrorCode, MetricEvent } from 'pokey-common';
+import { ErrorCode, MetricEvent, ConfigStatus } from 'pokey-common';
 import type { Schema, UpdateSchemaRequest } from 'pokey-common';
-import { SCHEMAS_TABLE } from '../../constants';
+import { CONFIGURATIONS_TABLE, SCHEMAS_TABLE } from '../../constants';
 import { ensureAdditionalProperties } from '../../utils/ensure-additional-properties';
 import { checkSchemaCompatibility } from '../../utils/schema-compatibility';
 import type { HandlerDependencies, Handler } from '../../adapters/types';
@@ -36,17 +36,30 @@ export function createSchemaUpdateHandler(deps: HandlerDependencies): Handler {
         return { statusCode: 422, body: { error: 'Schema data cannot be parsed by Ajv', code: ErrorCode.SCHEMA_INVALID } };
       }
 
-      const issues = checkSchemaCompatibility(existing.schemaData as Record<string, unknown>, newSchemaData);
-      if (issues.length > 0) {
-        deps.observability.trackError(ErrorCode.SCHEMA_INCOMPATIBLE);
-        return {
-          statusCode: 400,
-          body: {
-            error: 'Schema update is not backward-compatible',
-            code: ErrorCode.SCHEMA_INCOMPATIBLE,
-            details: issues,
-          },
-        };
+      const activeConfigs = await deps.dataLayer.query<{ id: string }>({
+        tableName: CONFIGURATIONS_TABLE,
+        indexName: 'configs-schemaId-index',
+        keyConditionExpression: 'schemaId = :schemaId',
+        filterExpression: '#s = :status',
+        expressionAttributeNames: { '#s': 'status' },
+        expressionAttributeValues: { ':schemaId': id, ':status': ConfigStatus.ACTIVE },
+        projectionExpression: 'id',
+        limit: 1,
+      });
+
+      if (activeConfigs.items.length > 0) {
+        const issues = checkSchemaCompatibility(existing.schemaData as Record<string, unknown>, newSchemaData);
+        if (issues.length > 0) {
+          deps.observability.trackError(ErrorCode.SCHEMA_INCOMPATIBLE);
+          return {
+            statusCode: 400,
+            body: {
+              error: 'Schema update is not backward-compatible',
+              code: ErrorCode.SCHEMA_INCOMPATIBLE,
+              details: issues,
+            },
+          };
+        }
       }
 
       const newName = body.name !== undefined ? body.name.toLowerCase() : existing.name;

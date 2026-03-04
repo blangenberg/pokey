@@ -34,8 +34,9 @@ describe('schema-update handler', () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it('returns 400 when update is not backward-compatible', async () => {
+  it('returns 400 when update is not backward-compatible and active configs exist', async () => {
     deps.dataLayer.get.mockResolvedValue({ ...existingSchema });
+    deps.dataLayer.query.mockResolvedValueOnce({ items: [{ id: 'config-1' }], lastEvaluatedKey: undefined });
     const handler = createSchemaUpdateHandler(deps);
     const res = await handler({
       pathParameters: { id: SCHEMA_ID },
@@ -43,6 +44,18 @@ describe('schema-update handler', () => {
       body: { schemaData: { type: 'object', properties: {}, required: [] } },
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it('allows incompatible update when no active configs exist', async () => {
+    deps.dataLayer.get.mockResolvedValue({ ...existingSchema });
+    const handler = createSchemaUpdateHandler(deps);
+    const res = await handler({
+      pathParameters: { id: SCHEMA_ID },
+      queryParameters: {},
+      body: { schemaData: { type: 'object', properties: {}, required: [] } },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(deps.dataLayer.update).toHaveBeenCalled();
   });
 
   it('allows a backward-compatible update', async () => {

@@ -168,11 +168,11 @@ export function jsonSchemaToTree(schema: JsonSchema, name?: string, uuid: UuidUt
     }
   }
 
-  const displayName = name ?? (schema.title as string | undefined) ?? 'Root';
+  const displayName = name ?? (schema.title as string | undefined) ?? 'Schema';
 
   return {
     id: uuid.generate(),
-    name: name ?? 'root',
+    name: name ?? 'schema',
     displayName,
     type: schemaType,
     compositionKind: compositionKind ?? undefined,
@@ -188,6 +188,14 @@ export function jsonSchemaToTree(schema: JsonSchema, name?: string, uuid: UuidUt
 }
 
 export function treeToJsonSchema(node: SchemaNode): JsonSchema {
+  const schema = buildSchemaNode(node);
+  if (node.type === 'object' && schema.additionalProperties === undefined) {
+    schema.additionalProperties = true;
+  }
+  return schema;
+}
+
+function buildSchemaNode(node: SchemaNode): JsonSchema {
   const schema: JsonSchema = {};
 
   if (node.ref) {
@@ -220,7 +228,7 @@ export function treeToJsonSchema(node: SchemaNode): JsonSchema {
       const required: string[] = [];
 
       for (const child of regularChildren) {
-        properties[child.name] = treeToJsonSchema(child);
+        properties[child.name] = buildSchemaNode(child);
         if (child.required) {
           required.push(child.name);
         }
@@ -236,14 +244,14 @@ export function treeToJsonSchema(node: SchemaNode): JsonSchema {
   if (node.type === 'array') {
     const itemChildren = node.children.filter((c) => c.name === '(items)' || c.name.startsWith('items['));
     if (itemChildren.length === 1 && itemChildren[0]?.name === '(items)') {
-      schema.items = treeToJsonSchema(itemChildren[0]);
+      schema.items = buildSchemaNode(itemChildren[0]);
     } else if (itemChildren.length > 0) {
-      schema.items = itemChildren.map((c) => treeToJsonSchema(c));
+      schema.items = itemChildren.map((c) => buildSchemaNode(c));
     }
 
     const containsChild = node.children.find((c) => c.name === '(contains)');
     if (containsChild) {
-      schema.contains = treeToJsonSchema(containsChild);
+      schema.contains = buildSchemaNode(containsChild);
     }
   }
 
@@ -251,29 +259,29 @@ export function treeToJsonSchema(node: SchemaNode): JsonSchema {
     if (node.compositionKind === 'not') {
       const notChild = node.children[0];
       if (notChild) {
-        schema.not = treeToJsonSchema(notChild);
+        schema.not = buildSchemaNode(notChild);
       }
     } else if (node.compositionKind === 'if/then/else') {
       for (const child of node.children) {
         if (child.name === 'if' || child.name === 'then' || child.name === 'else') {
-          schema[child.name] = treeToJsonSchema(child);
+          schema[child.name] = buildSchemaNode(child);
         }
       }
     } else {
-      schema[node.compositionKind] = node.children.map((c) => treeToJsonSchema(c));
+      schema[node.compositionKind] = node.children.map((c) => buildSchemaNode(c));
     }
   }
 
   const addPropsChild = node.children.find((c) => c.name === '(additionalProperties)');
   if (addPropsChild) {
-    schema.additionalProperties = treeToJsonSchema(addPropsChild);
+    schema.additionalProperties = buildSchemaNode(addPropsChild);
   }
 
   const defChildren = node.children.filter((c) => c.group === 'definitions');
   if (defChildren.length > 0) {
     const definitions: Record<string, JsonSchema> = {};
     for (const def of defChildren) {
-      definitions[def.name] = treeToJsonSchema(def);
+      definitions[def.name] = buildSchemaNode(def);
     }
     schema.definitions = definitions;
   }

@@ -1,5 +1,6 @@
 import React from 'react';
-import { NonIdealState, Button } from '@blueprintjs/core';
+import { Result, Button } from 'antd';
+import { ReloadOutlined } from '@ant-design/icons';
 import type { ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
@@ -32,11 +33,15 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <NonIdealState
-          icon="error"
+        <Result
+          status="error"
           title="Something went wrong"
-          description={this.state.error?.message ?? 'An unexpected error occurred.'}
-          action={<Button intent="primary" text="Reload" icon="refresh" onClick={this.handleReset} />}
+          subTitle={this.state.error?.message ?? 'An unexpected error occurred.'}
+          extra={
+            <Button type="primary" icon={<ReloadOutlined />} onClick={this.handleReset}>
+              Reload
+            </Button>
+          }
         />
       );
     }

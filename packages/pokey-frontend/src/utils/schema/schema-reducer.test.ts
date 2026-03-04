@@ -130,10 +130,10 @@ describe('schemaReducer', () => {
 
       const result = schemaReducer(state, {
         type: 'UPDATE_NODE',
-        payload: { id: state.root.children[0]!.id, updates: { required: true } },
+        payload: { id: state.root.children[0]!.id, updates: { displayName: 'Updated' } },
       });
 
-      expect(findNode(result.root, state.root.children[1]!.id)!.required).toBe(false);
+      expect(findNode(result.root, state.root.children[1]!.id)!.displayName).toBe('age');
     });
   });
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, HTMLSelect, HTMLTable, InputGroup, NonIdealState, Spinner } from '@blueprintjs/core';
+import { Button, Input, Select, Spin, Result } from 'antd';
+import { SearchOutlined, IdcardOutlined, PlusOutlined, FilterOutlined } from '@ant-design/icons';
 import { ListPage } from '../../components/shared/ListPage';
 import { SchemaSelector } from '../../components/shared/SchemaSelector';
 import { usePagination } from '../../hooks/use-pagination';
@@ -18,8 +19,8 @@ interface SchemaOption {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'active', label: 'Active' },
   { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
   { value: 'disabled', label: 'Disabled' },
 ];
 
@@ -64,7 +65,7 @@ export function ConfigList(): React.JSX.Element {
         pagination.setNextToken(response.nextToken);
       } catch (error: unknown) {
         if (error instanceof Error && error.name === 'AbortError') return;
-        void showErrorToast('Failed to load configs. Please try again.');
+        showErrorToast('Failed to load configs. Please try again.');
       } finally {
         setLoading(false);
         setInitialLoad(false);
@@ -131,8 +132,7 @@ export function ConfigList(): React.JSX.Element {
   );
 
   const handleStatusChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>): void => {
-      const value = e.target.value;
+    (value: string): void => {
       setStatusFilter(value);
       syncUrlParams(nameFilter, idFilter, value, schemaFilter?.id);
       pagination.reset();
@@ -152,48 +152,49 @@ export function ConfigList(): React.JSX.Element {
   const filterBar = (
     <>
       <SchemaSelector value={schemaFilter} onSelect={handleSchemaSelect} placeholder="Filter by schema..." />
-      <InputGroup
+      <Input
         placeholder="Filter by name..."
         value={nameFilter}
         onChange={handleNameChange}
-        leftIcon="search"
+        prefix={<SearchOutlined />}
         aria-label="Filter by name"
         style={{ maxWidth: 200 }}
       />
-      <InputGroup
+      <Input
         placeholder="Filter by ID..."
         value={idFilter}
         onChange={handleIdChange}
-        leftIcon="id-number"
+        prefix={<IdcardOutlined />}
         aria-label="Filter by ID"
         style={{ maxWidth: 200 }}
       />
-      <HTMLSelect value={statusFilter} onChange={handleStatusChange} aria-label="Filter by status">
-        {STATUS_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </HTMLSelect>
+      <Select
+        value={statusFilter}
+        onChange={handleStatusChange}
+        options={STATUS_OPTIONS}
+        aria-label="Filter by status"
+        style={{ minWidth: 115 }}
+      />
     </>
   );
 
   const createButton = (
     <Button
-      intent="success"
-      icon="plus"
-      text="Create Config"
+      type="primary"
+      icon={<PlusOutlined />}
       onClick={(): void => {
         void navigate('/configs/new');
       }}
-    />
+    >
+      Create Config
+    </Button>
   );
 
   const renderTable = (): React.JSX.Element => {
     if (initialLoad) {
       return (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-          <Spinner size={40} />
+          <Spin size="large" />
         </div>
       );
     }
@@ -201,19 +202,20 @@ export function ConfigList(): React.JSX.Element {
     if (items.length === 0) {
       const hasFilters = nameFilter || idFilter || statusFilter !== 'active' || schemaFilter;
       return (
-        <NonIdealState
-          icon={hasFilters ? 'filter-remove' : 'search'}
+        <Result
+          icon={hasFilters ? <FilterOutlined /> : <SearchOutlined />}
           title={hasFilters ? 'No matching results' : 'No configs found'}
-          description={hasFilters ? 'Try adjusting your filters.' : 'Create your first config to get started.'}
-          action={
+          subTitle={hasFilters ? 'Try adjusting your filters.' : 'Create your first config to get started.'}
+          extra={
             !hasFilters ? (
               <Button
-                intent="success"
-                text="Create Config"
+                type="primary"
                 onClick={(): void => {
                   void navigate('/configs/new');
                 }}
-              />
+              >
+                Create Config
+              </Button>
             ) : undefined
           }
         />
@@ -221,7 +223,7 @@ export function ConfigList(): React.JSX.Element {
     }
 
     return (
-      <HTMLTable bordered striped interactive className="pokey-config-table">
+      <table className="pokey-config-table">
         <thead>
           <tr>
             <th>ID</th>
@@ -253,7 +255,7 @@ export function ConfigList(): React.JSX.Element {
             );
           })}
         </tbody>
-      </HTMLTable>
+      </table>
     );
   };
 

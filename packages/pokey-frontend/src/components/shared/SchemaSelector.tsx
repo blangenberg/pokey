@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import { MenuItem, Spinner } from '@blueprintjs/core';
-import { Suggest } from '@blueprintjs/select';
+import React, { useState, useCallback, useEffect } from 'react';
+import { AutoComplete, Spin } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import { useSchemaSearch } from '../../hooks/use-schema-search';
 
 interface SchemaOption {
@@ -29,77 +29,85 @@ export const SchemaSelector = React.memo(function SchemaSelector({
   const [query, setQuery] = useState('');
   const { results: items, loading, search } = useSchemaSearch({ statusFilter });
 
-  const handleQueryChange = useCallback(
-    (newQuery: string): void => {
-      setQuery(newQuery);
-      search(newQuery);
+  useEffect((): void => {
+    setQuery(value?.name ?? '');
+  }, [value?.name]);
+
+  useEffect((): void => {
+    if (value?.name && value.name.length >= MIN_QUERY_LENGTH) {
+      search(value.name);
+    }
+  }, [value?.name, search]);
+
+  const handleSearch = useCallback(
+    (searchText: string): void => {
+      setQuery(searchText);
+      search(searchText);
+      if (searchText === '' && value) {
+        onSelect(null);
+      }
     },
-    [search],
+    [search, value, onSelect],
   );
 
-  const handleItemSelect = useCallback(
-    (item: SchemaOption): void => {
-      onSelect(item);
-      setQuery(item.name);
+  const handleSelect = useCallback(
+    (selectedValue: string): void => {
+      const item = items.find((i) => i.id === selectedValue);
+      if (item) {
+        onSelect(item);
+        setQuery(item.name);
+      }
     },
-    [onSelect],
+    [items, onSelect],
   );
 
-  const renderItem = useCallback(
-    (
-      item: SchemaOption,
-      { handleClick, modifiers }: { handleClick: React.MouseEventHandler; modifiers: { active: boolean; matchesPredicate: boolean } },
-    ): React.JSX.Element | null => {
-      if (!modifiers.matchesPredicate) return null;
-      const isDimmed = item.status !== 'active';
-      return (
-        <MenuItem
-          key={item.id}
-          text={<span style={{ opacity: isDimmed ? 0.5 : 1 }}>{item.name}</span>}
-          label={statusFilter === 'active' ? undefined : item.status}
-          active={modifiers.active}
-          onClick={handleClick}
-        />
-      );
-    },
-    [statusFilter],
-  );
-
-  const renderNoResults = useCallback((): React.JSX.Element => {
+  const options = React.useMemo((): { value: string; label: React.ReactNode; disabled?: boolean }[] => {
     if (loading) {
-      return <MenuItem disabled text={<Spinner size={16} />} />;
+      return [{ value: '__loading', label: <Spin size="small" />, disabled: true }];
     }
     if (query.length > 0 && query.length < MIN_QUERY_LENGTH) {
-      return <MenuItem disabled text="Type at least 3 characters to search" />;
+      return [{ value: '__min', label: 'Type at least 3 characters to search', disabled: true }];
     }
-    if (query.length >= MIN_QUERY_LENGTH) {
-      return <MenuItem disabled text="No schemas found" />;
+    if (query.length >= MIN_QUERY_LENGTH && items.length === 0) {
+      return [{ value: '__none', label: 'No schemas found', disabled: true }];
     }
-    return <MenuItem disabled text="Start typing to search schemas" />;
-  }, [loading, query]);
+    if (query.length === 0) {
+      return [{ value: '__start', label: 'Start typing to search schemas', disabled: true }];
+    }
+    return items.map((item) => {
+      const isDimmed = item.status !== 'active';
+      return {
+        value: item.id,
+        label: (
+          <span>
+            <span style={{ opacity: isDimmed ? 0.5 : 1 }}>{item.name}</span>
+            {statusFilter !== 'active' && <span style={{ marginLeft: 8, color: '#999' }}>{item.status}</span>}
+          </span>
+        ),
+      };
+    });
+  }, [loading, query, items, statusFilter]);
+
+  const handleChange = useCallback(
+    (inputValue: string): void => {
+      handleSearch(inputValue);
+    },
+    [handleSearch],
+  );
 
   return (
-    <Suggest<SchemaOption>
-      items={items}
-      itemRenderer={renderItem}
-      onItemSelect={handleItemSelect}
-      query={query}
-      onQueryChange={handleQueryChange}
-      selectedItem={value}
-      noResults={renderNoResults()}
-      inputValueRenderer={(item): string => item.name}
+    <AutoComplete
+      value={query}
+      options={options}
+      onChange={handleChange}
+      onSelect={handleSelect}
       disabled={disabled}
-      resetOnClose={false}
-      resetOnSelect={false}
-      inputProps={{
-        placeholder,
-        leftIcon: 'search',
-        'aria-label': 'Search schemas',
-      }}
-      popoverProps={{
-        minimal: true,
-        matchTargetWidth: true,
-      }}
+      placeholder={placeholder}
+      aria-label="Search schemas"
+      style={{ width: '100%' }}
+      notFoundContent={null}
+      showSearch={{ onSearch: handleSearch, filterOption: false }}
+      prefix={<SearchOutlined />}
     />
   );
 });

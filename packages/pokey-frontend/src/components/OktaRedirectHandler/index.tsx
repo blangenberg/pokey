@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Spinner, Dialog, Button, DialogBody, DialogFooter } from '@blueprintjs/core';
+import { Spin, Modal, Button } from 'antd';
+import { CrownOutlined, ArrowRightOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import * as oauth from 'oauth4webapi';
 import { Logo } from '../Logo';
 import { storeTokens, consumeUrlState } from '../../services/auth';
@@ -31,61 +32,47 @@ export function OktaRedirectHandler(): React.JSX.Element {
       const baseUrl = import.meta.env.VITE_OKTA_BASE_URL;
       const clientId = import.meta.env.VITE_OKTA_CLIENT_ID;
       const redirectUri = import.meta.env.VITE_OKTA_REDIRECT_URI ?? 'http://localhost:3000/okta-redirect';
-
       if (!baseUrl || !clientId) {
         setError('Okta is not configured.');
         return;
       }
-
       const issuer = new URL(baseUrl);
       const discoveryResponse = await oauth.discoveryRequest(issuer);
       const as = await oauth.processDiscoveryResponse(issuer, discoveryResponse);
-
       const client: oauth.Client = { client_id: clientId, token_endpoint_auth_method: 'none' };
-
       const currentUrl = new URL(window.location.href);
       const savedState = localStorage.getItem('urlState') ?? '/';
-
       const params = oauth.validateAuthResponse(as, client, currentUrl, savedState);
-
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- oauth4webapi type guard
       if (oauth.isOAuth2Error(params)) {
         const errDesc = (params as Record<string, unknown>).error_description;
         setError(typeof errDesc === 'string' ? errDesc : 'An OAuth2 error occurred.');
         return;
       }
-
       const codeVerifier = sessionStorage.getItem('code_verifier');
       if (!codeVerifier) {
         setError('Missing code verifier. Please try signing in again.');
         return;
       }
-
       const tokenResponse = await oauth.authorizationCodeGrantRequest(as, client, params, redirectUri, codeVerifier);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call -- oauth4webapi complex return types
       const result = await oauth.processAuthorizationCodeOpenIDResponse(as, client, tokenResponse);
-
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- oauth4webapi type guard
       if (oauth.isOAuth2Error(result)) {
         const errDesc = (result as Record<string, unknown>).error_description;
         setError(typeof errDesc === 'string' ? errDesc : 'Token exchange failed.');
         return;
       }
-
       const resultRecord = result as Record<string, unknown>;
       const idToken = typeof resultRecord.id_token === 'string' ? resultRecord.id_token : undefined;
       const accessToken = typeof resultRecord.access_token === 'string' ? resultRecord.access_token : undefined;
-
       if (!idToken) {
         setError('No ID token received.');
         return;
       }
-
       const decodedPayload = JSON.parse(atob(idToken.split('.')[1] as string)) as IdTokenPayload;
       const groups = decodedPayload.groups ?? [];
-
       setTokenState({ idToken, accessToken });
-
       if (groups.length === 1) {
         completeAuth(idToken, accessToken, decodedPayload.name ?? decodedPayload.email, groups[0] as string);
       } else if (groups.length > 1) {
@@ -123,12 +110,13 @@ export function OktaRedirectHandler(): React.JSX.Element {
           <h3>Authentication Error</h3>
           <p>{error}</p>
           <Button
-            intent="primary"
-            text="Try Again"
+            type="primary"
             onClick={(): void => {
               void navigate('/okta-signin', { replace: true });
             }}
-          />
+          >
+            Try Again
+          </Button>
         </div>
       </div>
     );
@@ -136,36 +124,43 @@ export function OktaRedirectHandler(): React.JSX.Element {
 
   if (payload && payload.groups && payload.groups.length > 1) {
     return (
-      <Dialog isOpen title="" className="aura-signin-dialog">
-        <DialogBody>
-          <div style={{ textAlign: 'center', marginBottom: 20 }}>
-            <Logo />
-            <h3 style={{ marginTop: 16 }}>Pokey ({import.meta.env.VITE_STAGE ?? 'local'})</h3>
-            <p>Welcome, {payload.name ?? payload.email}. Please choose your role:</p>
-          </div>
-          {payload.groups.map((group) => (
-            <Button
-              key={group}
-              onClick={(): void => {
-                handleRoleSelect(group);
-              }}
-              icon="hat"
-              endIcon="arrow-right"
-              text={group.split('-').pop()}
-              fill
-              size="large"
-              style={{ marginBottom: 10 }}
-            />
-          ))}
-        </DialogBody>
-        <DialogFooter actions={<Button icon="arrow-left" variant="outlined" text="Cancel" fill size="large" onClick={handleCancel} />} />
-      </Dialog>
+      <Modal
+        open
+        title={null}
+        className="aura-signin-dialog"
+        footer={
+          <Button icon={<ArrowLeftOutlined />} block size="large" onClick={handleCancel}>
+            Cancel
+          </Button>
+        }
+        closable={false}
+      >
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <Logo />
+          <h3 style={{ marginTop: 16 }}>Pokey ({import.meta.env.VITE_STAGE ?? 'local'})</h3>
+          <p>Welcome, {payload.name ?? payload.email}. Please choose your role:</p>
+        </div>
+        {payload.groups.map((group) => (
+          <Button
+            key={group}
+            onClick={(): void => {
+              handleRoleSelect(group);
+            }}
+            icon={<CrownOutlined />}
+            block
+            size="large"
+            style={{ marginBottom: 10 }}
+          >
+            {group.split('-').pop()} <ArrowRightOutlined />
+          </Button>
+        ))}
+      </Modal>
     );
   }
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-      <Spinner size={50} />
+      <Spin size="large" />
     </div>
   );
 }

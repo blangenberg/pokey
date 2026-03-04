@@ -1,11 +1,35 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { useNavigate, useParams, useBlocker } from 'react-router-dom';
-import { Button, InputGroup, Spinner, Alert, Menu, MenuItem, Popover } from '@blueprintjs/core';
+import { useNavigate, useParams, useBlocker, useLocation } from 'react-router-dom';
+import { Button, Input, Spin, Modal, Dropdown } from 'antd';
+import {
+  CheckOutlined,
+  CloseOutlined,
+  CodeOutlined,
+  CopyOutlined,
+  SaveOutlined,
+  PlusOutlined,
+  FontSizeOutlined,
+  NumberOutlined,
+  CheckSquareOutlined,
+  UnorderedListOutlined,
+  QuestionCircleOutlined,
+} from '@ant-design/icons';
+import type { MenuProps } from 'antd';
 import { StatusToggle } from '../../components/shared/StatusToggle';
 import { TreeNodeComponent } from '../../components/schema-editor/TreeNode';
 import { PropertyPanel } from '../../components/schema-editor/PropertyPanel';
 import { EditJsonModal } from '../../components/schema-editor/EditJsonModal';
-import { schemaReducer, INITIAL_STATE, findNode, getAncestorIds, hasProperties } from '../../utils/schema/schema-reducer';
+import {
+  schemaReducer,
+  INITIAL_STATE,
+  findNode,
+  findParent,
+  getAncestorIds,
+  getNodePath,
+  hasProperties,
+  hasDuplicateSiblingNames,
+  getUniqueSiblingName,
+} from '../../utils/schema/schema-reducer';
 import { jsonSchemaToTree, treeToJsonSchema } from '../../utils/schema/schema-mapping';
 import { createEmptyNode, createCompositionNode, createRootNode } from '../../utils/schema/schema-types';
 import type { SchemaNodeType, CompositionKind, SchemaNode } from '../../utils/schema/schema-types';
@@ -26,12 +50,14 @@ const MIN_RIGHT = 400;
 export function SchemaEditor(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const isEditMode = Boolean(id);
 
   const [schemaName, setSchemaName] = useState('');
   const [schemaStatus, setSchemaStatus] = useState('active');
   const [state, dispatch] = useReducer(schemaReducer, INITIAL_STATE);
-  const [savedState, setSavedState] = useState<string>('');
+  const [savedState, setSavedState] = useState<string>(() => (isEditMode ? '' : JSON.stringify(treeToJsonSchema(INITIAL_STATE.root))));
+  const [savedSchemaName, setSavedSchemaName] = useState('');
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
   const [jsonModalOpen, setJsonModalOpen] = useState(false);
@@ -43,17 +69,32 @@ export function SchemaEditor(): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+  const skipBlockRef = useRef(false);
 
   const currentJson = useMemo(() => JSON.stringify(treeToJsonSchema(state.root)), [state.root]);
-  const isDirty = currentJson !== savedState || (!isEditMode && schemaName !== '');
+  const isDirty = currentJson !== savedState || schemaName !== savedSchemaName;
 
-  const blocker = useBlocker(isDirty);
+  const blocker = useBlocker((): boolean => {
+    if (skipBlockRef.current) {
+      skipBlockRef.current = false;
+      return false;
+    }
+    return !loading && isDirty;
+  });
 
   useEffect(() => {
     if (!isEditMode) {
-      const root = createRootNode();
-      dispatch({ type: 'SET_TREE', payload: root });
-      setSavedState(JSON.stringify(treeToJsonSchema(root)));
+      const cloneData = (location.state as { cloneSchema?: JsonSchema; cloneName?: string } | null) ?? {};
+      if (cloneData.cloneSchema) {
+        const tree = jsonSchemaToTree(cloneData.cloneSchema);
+        dispatch({ type: 'SET_TREE', payload: tree });
+        setSavedState(JSON.stringify(treeToJsonSchema(tree)));
+        setSchemaName(cloneData.cloneName ? `${cloneData.cloneName} (copy)` : '');
+      } else {
+        const root = createRootNode();
+        dispatch({ type: 'SET_TREE', payload: root });
+        setSavedState(JSON.stringify(treeToJsonSchema(root)));
+      }
       return;
     }
 
@@ -67,10 +108,11 @@ export function SchemaEditor(): React.JSX.Element {
         setSchemaStatus(schema.status);
         const tree = jsonSchemaToTree(schema.schemaData as JsonSchema);
         dispatch({ type: 'SET_TREE', payload: tree });
-        setSavedState(JSON.stringify(schema.schemaData));
+        setSavedState(JSON.stringify(treeToJsonSchema(tree)));
+        setSavedSchemaName(schema.name);
       } catch (error: unknown) {
         if (error instanceof Error && error.name === 'AbortError') return;
-        void showErrorToast('Failed to load schema.');
+        showErrorToast('Failed to load schema.');
         void navigate('/schemas', { replace: true });
       } finally {
         setLoading(false);
@@ -83,11 +125,16 @@ export function SchemaEditor(): React.JSX.Element {
   }, [id, isEditMode, navigate]);
 
   const handleSave = useCallback(async (): Promise<void> => {
+    if (hasDuplicateSiblingNames(state.root)) {
+      showErrorToast('Duplicate property names found at the same level. Rename them before saving.');
+      return;
+    }
+
     const schemaData = treeToJsonSchema(state.root);
 
     const validation = validateSchema(schemaData);
     if (!validation.valid) {
-      void showErrorToast(`Schema is malformed: ${validation.error ?? 'Unknown error.'}`);
+      showErrorToast(`Schema is malformed: ${validation.error ?? 'Unknown error.'}`);
       return;
     }
 
@@ -95,13 +142,16 @@ export function SchemaEditor(): React.JSX.Element {
 
     try {
       if (isEditMode) {
-        await api.put(`schemas/${id as string}`, { json: { schemaData } });
+        await api.put(`schemas/${id as string}`, { json: { name: schemaName, schemaData } });
         setSavedState(JSON.stringify(schemaData));
-        void showSuccessToast('Schema updated successfully.');
+        setSavedSchemaName(schemaName);
+        showSuccessToast('Schema updated successfully.');
       } else {
         const result = await api.post('schemas', { json: { name: schemaName, schemaData } }).json<Schema>();
         setSavedState(JSON.stringify(schemaData));
-        void showSuccessToast('Schema created successfully.');
+        setSavedSchemaName(schemaName);
+        showSuccessToast('Schema created successfully.');
+        skipBlockRef.current = true;
         void navigate(`/schemas/${result.id}`, { replace: true });
       }
     } catch (error: unknown) {
@@ -116,7 +166,7 @@ export function SchemaEditor(): React.JSX.Element {
       const action = statusToAction(newStatus);
       await api.post(`schemas/${id as string}/${action}`);
       setSchemaStatus(newStatus);
-      void showSuccessToast(`Schema ${statusActionLabel(action)}.`);
+      showSuccessToast(`Schema ${statusActionLabel(action)}.`);
     },
     [id],
   );
@@ -125,9 +175,9 @@ export function SchemaEditor(): React.JSX.Element {
     const schemaData = treeToJsonSchema(state.root);
     const result = validateSchema(schemaData);
     if (result.valid) {
-      void showSuccessToast('Schema is valid.');
+      showSuccessToast('Schema is valid.');
     } else {
-      void showErrorToast(`Validation failed: ${result.error ?? 'Unknown error.'}`);
+      showErrorToast(`Validation failed: ${result.error ?? 'Unknown error.'}`);
     }
   }, [state.root]);
 
@@ -139,14 +189,29 @@ export function SchemaEditor(): React.JSX.Element {
 
   const handleAddNode = useCallback(
     (type: SchemaNodeType): void => {
-      const parentId = state.selectedNodeId ?? state.root.id;
+      let parentId = state.selectedNodeId ?? state.root.id;
       const parent = findNode(state.root, parentId);
       if (!parent || (parent.type !== 'object' && parent.type !== 'array' && !parent.compositionKind)) {
-        const node = createEmptyNode(type, `new${type.charAt(0).toUpperCase()}${type.slice(1)}`);
-        dispatch({ type: 'ADD_NODE', payload: { parentId: state.root.id, node } });
+        parentId = state.root.id;
+      }
+      const actualParent = findNode(state.root, parentId) ?? state.root;
+
+      if (actualParent.type === 'array') {
+        const hasItems = actualParent.children.some((c) => c.name === '(items)');
+        if (hasItems) {
+          showWarningToast('This list already has an item schema defined. Remove it first to change the item type.');
+          return;
+        }
+        const node = createEmptyNode(type, '(items)');
+        node.displayName = 'List Type';
+        node.required = false;
+        dispatch({ type: 'ADD_NODE', payload: { parentId, node } });
         return;
       }
-      const node = createEmptyNode(type, `new${type.charAt(0).toUpperCase()}${type.slice(1)}`);
+
+      const baseName = `new${type.charAt(0).toUpperCase()}${type.slice(1)}`;
+      const uniqueName = getUniqueSiblingName(baseName, actualParent.children);
+      const node = createEmptyNode(type, uniqueName);
       dispatch({ type: 'ADD_NODE', payload: { parentId, node } });
     },
     [state.selectedNodeId, state.root],
@@ -155,10 +220,12 @@ export function SchemaEditor(): React.JSX.Element {
   const handleAddComposition = useCallback(
     (kind: CompositionKind): void => {
       const parentId = state.selectedNodeId ?? state.root.id;
-      const node = createCompositionNode(kind, kind);
+      const actualParent = findNode(state.root, parentId) ?? state.root;
+      const uniqueName = getUniqueSiblingName(kind, actualParent.children);
+      const node = createCompositionNode(kind, uniqueName);
       dispatch({ type: 'ADD_NODE', payload: { parentId, node } });
     },
-    [state.selectedNodeId, state.root.id],
+    [state.selectedNodeId, state.root],
   );
 
   const handleSelect = useCallback((nodeId: string): void => {
@@ -216,129 +283,162 @@ export function SchemaEditor(): React.JSX.Element {
 
   const selectedNode = state.selectedNodeId ? (findNode(state.root, state.selectedNodeId) ?? null) : null;
 
+  const nodePath = useMemo((): SchemaNode[] => {
+    if (!state.selectedNodeId) return [];
+    return getNodePath(state.root, state.selectedNodeId);
+  }, [state.root, state.selectedNodeId]);
+
+  const siblingNames = useMemo((): Set<string> => {
+    if (!state.selectedNodeId) return new Set();
+    const parent = findParent(state.root, state.selectedNodeId);
+    if (!parent) return new Set();
+    return new Set(parent.children.filter((c) => c.id !== state.selectedNodeId).map((c) => c.name));
+  }, [state.root, state.selectedNodeId]);
+
   const canSave = schemaName.trim().length > 0 && hasProperties(state.root) && !saving;
+
+  const addMenuItems: MenuProps['items'] = [
+    {
+      key: 'string',
+      label: 'Text (String)',
+      icon: <FontSizeOutlined />,
+      onClick: (): void => {
+        handleAddNode('string');
+      },
+    },
+    {
+      key: 'number',
+      label: 'Number',
+      icon: <NumberOutlined />,
+      onClick: (): void => {
+        handleAddNode('number');
+      },
+    },
+    {
+      key: 'boolean',
+      label: 'True / False (Boolean)',
+      icon: <CheckSquareOutlined />,
+      onClick: (): void => {
+        handleAddNode('boolean');
+      },
+    },
+    {
+      key: 'object',
+      label: 'Object',
+      icon: <span style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{'{}'}</span>,
+      onClick: (): void => {
+        handleAddNode('object');
+      },
+    },
+    {
+      key: 'array',
+      label: 'List (Array)',
+      icon: <UnorderedListOutlined />,
+      onClick: (): void => {
+        handleAddNode('array');
+      },
+    },
+    {
+      key: 'allOf',
+      label: 'All Of',
+      icon: <QuestionCircleOutlined />,
+      onClick: (): void => {
+        handleAddComposition('allOf');
+      },
+    },
+    {
+      key: 'anyOf',
+      label: 'Any Of',
+      icon: <QuestionCircleOutlined />,
+      onClick: (): void => {
+        handleAddComposition('anyOf');
+      },
+    },
+    {
+      key: 'oneOf',
+      label: 'One Of',
+      icon: <QuestionCircleOutlined />,
+      onClick: (): void => {
+        handleAddComposition('oneOf');
+      },
+    },
+  ];
 
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-        <Spinner size={50} />
+        <Spin size="large" />
       </div>
     );
   }
 
-  const addMenu = (
-    <Menu>
-      <MenuItem
-        text="Text (String)"
-        icon="font"
-        onClick={(): void => {
-          handleAddNode('string');
-        }}
-      />
-      <MenuItem
-        text="Number"
-        icon="numerical"
-        onClick={(): void => {
-          handleAddNode('number');
-        }}
-      />
-      <MenuItem
-        text="True / False (Boolean)"
-        icon="segmented-control"
-        onClick={(): void => {
-          handleAddNode('boolean');
-        }}
-      />
-      <MenuItem
-        text="Object"
-        icon="folder-open"
-        onClick={(): void => {
-          handleAddNode('object');
-        }}
-      />
-      <MenuItem
-        text="List (Array)"
-        icon="list"
-        onClick={(): void => {
-          handleAddNode('array');
-        }}
-      />
-      <MenuItem
-        text="All Of"
-        icon="help"
-        onClick={(): void => {
-          handleAddComposition('allOf');
-        }}
-      />
-      <MenuItem
-        text="Any Of"
-        icon="help"
-        onClick={(): void => {
-          handleAddComposition('anyOf');
-        }}
-      />
-      <MenuItem
-        text="One Of"
-        icon="help"
-        onClick={(): void => {
-          handleAddComposition('oneOf');
-        }}
-      />
-    </Menu>
-  );
-
   return (
     <div className="pokey-schema-editor">
+      <div className="pokey-schema-editor-uuid">{id ?? '\u00A0'}</div>
       <div className="pokey-schema-editor-topbar">
         <div className="pokey-schema-editor-topbar-left">
-          <InputGroup
+          <Input
             value={schemaName}
             onChange={(e): void => {
               setSchemaName(e.target.value);
             }}
-            placeholder="Schema name..."
-            readOnly={isEditMode}
+            placeholder="Enter schema name"
+            readOnly={false}
             aria-label="Schema name"
             style={{ maxWidth: 300 }}
           />
           {isEditMode && <StatusToggle status={schemaStatus} onToggle={handleStatusToggle} />}
+          <Dropdown menu={{ items: addMenuItems }} placement="bottomLeft">
+            <Button icon={<PlusOutlined />}>Add Element</Button>
+          </Dropdown>
+          {isEditMode && (
+            <Button
+              icon={<CopyOutlined />}
+              onClick={(): void => {
+                skipBlockRef.current = true;
+                void navigate('/schemas/new', { state: { cloneSchema: treeToJsonSchema(state.root), cloneName: schemaName } });
+              }}
+            >
+              Clone
+            </Button>
+          )}
         </div>
         <div className="pokey-schema-editor-topbar-right">
-          <Button text="Validate" icon="tick" onClick={handleValidate} />
+          <Button icon={<CheckOutlined />} onClick={handleValidate}>
+            Validate
+          </Button>
           <Button
-            text="Edit JSON"
-            icon="code"
+            icon={<CodeOutlined />}
             onClick={(): void => {
               setJsonModalOpen(true);
             }}
-          />
+          >
+            Edit JSON
+          </Button>
           <Button
-            intent="success"
-            text={saving ? 'Saving...' : 'Save Schema'}
-            icon="floppy-disk"
+            type="primary"
+            icon={<SaveOutlined />}
             disabled={!canSave}
             loading={saving}
             onClick={(): void => {
               void handleSave();
             }}
-          />
-          <Button variant="minimal" text="Cancel" onClick={(): void => void navigate('/schemas')} />
+            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+          >
+            {saving ? 'Saving...' : 'Save Schema'}
+          </Button>
+          <Button icon={<CloseOutlined />} onClick={(): void => void navigate('/schemas')}>
+            Close
+          </Button>
         </div>
       </div>
-
       <div className="pokey-schema-editor-body" ref={containerRef}>
         <div className="pokey-schema-editor-left" style={{ width: leftWidth }}>
-          <div className="pokey-schema-editor-tree-header">
-            <Popover content={addMenu} placement="bottom-start">
-              <Button icon="plus" size="small" aria-label="Add property" />
-            </Popover>
-          </div>
           <div className="pokey-schema-editor-tree" role="tree">
             <TreeNodeComponent
               node={state.root}
               depth={0}
-              isSelected={state.root.id === state.selectedNodeId}
-              isAncestor={ancestorIds.has(state.root.id)}
+              selectedNodeId={state.selectedNodeId}
               onSelect={handleSelect}
               onToggleExpand={handleToggleExpand}
               onDelete={handleDeleteNode}
@@ -350,7 +450,13 @@ export function SchemaEditor(): React.JSX.Element {
         <div className="pokey-schema-editor-divider" onMouseDown={handleMouseDown} />
 
         <div className="pokey-schema-editor-right">
-          <PropertyPanel node={selectedNode} onUpdate={handleUpdateNode} />
+          <PropertyPanel
+            node={selectedNode}
+            onUpdate={handleUpdateNode}
+            onSelect={handleSelect}
+            siblingNames={siblingNames}
+            nodePath={nodePath}
+          />
         </div>
       </div>
 
@@ -363,17 +469,16 @@ export function SchemaEditor(): React.JSX.Element {
         }}
       />
 
-      <Alert
-        isOpen={blocker.state === 'blocked'}
-        confirmButtonText="Leave"
-        cancelButtonText="Stay"
-        intent="warning"
-        icon="warning-sign"
-        onConfirm={(): void => blocker.proceed?.()}
+      <Modal
+        open={blocker.state === 'blocked'}
+        title="Unsaved Changes"
+        okText="Leave"
+        cancelText="Stay"
+        onOk={(): void => blocker.proceed?.()}
         onCancel={(): void => blocker.reset?.()}
       >
         <p>You have unsaved changes. Leave without saving?</p>
-      </Alert>
+      </Modal>
     </div>
   );
 }
@@ -388,22 +493,22 @@ async function handleSaveError(error: unknown): Promise<void> {
       const details = body.details ?? body.error ?? '';
 
       if (status === 409) {
-        void showWarningToast('A schema with this name already exists.');
+        showWarningToast('A schema with this name already exists.');
       } else if (status === 400) {
-        void showWarningToast(`Schema update is not backward-compatible: ${details}`);
+        showWarningToast('Schema update is not backward-compatible.');
       } else if (status === 422) {
-        void showErrorToast(`Schema is malformed: ${details}`);
+        showErrorToast(`Schema is malformed: ${details}`);
       } else if (status >= 500) {
-        void showErrorToast('Server error — please try again.');
+        showErrorToast('Server error — please try again.');
       } else {
-        void showErrorToast(details || 'An unexpected error occurred.');
+        showErrorToast(details || 'An unexpected error occurred.');
       }
     } catch {
-      void showErrorToast('Server error — please try again.');
+      showErrorToast('Server error — please try again.');
     }
   } else if (error instanceof TypeError) {
-    void showErrorToast('Unable to reach the server. Check your connection.');
+    showErrorToast('Unable to reach the server. Check your connection.');
   } else {
-    void showErrorToast('An unexpected error occurred.');
+    showErrorToast('An unexpected error occurred.');
   }
 }

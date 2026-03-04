@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useBlocker } from 'react-router-dom';
-import { Button, InputGroup, Spinner, Alert, NonIdealState } from '@blueprintjs/core';
+import { Button, Input, Spin, Modal, Result } from 'antd';
+import { SaveOutlined, DatabaseOutlined } from '@ant-design/icons';
 import { StatusToggle } from '../../components/shared/StatusToggle';
 import { SchemaSelector } from '../../components/shared/SchemaSelector';
 import { DynamicFormRenderer } from '../../components/config-editor/DynamicFormRenderer';
@@ -29,12 +30,15 @@ export function ConfigEditor(): React.JSX.Element {
   const [selectedSchema, setSelectedSchema] = useState<SchemaOption | null>(null);
   const [schemaData, setSchemaData] = useState<JsonSchema | null>(null);
   const [formData, setFormData] = useState<Record<string, unknown>>({});
-  const [savedState, setSavedState] = useState('');
+  const [savedState, setSavedState] = useState<string>(() =>
+    isEditMode ? '' : JSON.stringify({ name: '', schemaId: undefined, data: {} }),
+  );
   const [validationErrors, setValidationErrors] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
+  const skipBlockRef = useRef(false);
 
   const currentState = useMemo(
     () => JSON.stringify({ name: configName, schemaId: selectedSchema?.id, data: formData }),
@@ -42,7 +46,13 @@ export function ConfigEditor(): React.JSX.Element {
   );
   const isDirty = currentState !== savedState;
 
-  const blocker = useBlocker(isDirty);
+  const blocker = useBlocker((): boolean => {
+    if (skipBlockRef.current) {
+      skipBlockRef.current = false;
+      return false;
+    }
+    return !loading && isDirty;
+  });
 
   useEffect(() => {
     if (!isEditMode) {
@@ -71,7 +81,7 @@ export function ConfigEditor(): React.JSX.Element {
         setSavedState(JSON.stringify({ name: config.name, schemaId: config.schemaId, data: config.configData }));
       } catch (error: unknown) {
         if (error instanceof Error && error.name === 'AbortError') return;
-        void showErrorToast('Failed to load config.');
+        showErrorToast('Failed to load config.');
         void navigate('/configs', { replace: true });
       } finally {
         setLoading(false);
@@ -97,7 +107,7 @@ export function ConfigEditor(): React.JSX.Element {
       setFormData(buildDefaults(fullSchema.schemaData as JsonSchema));
       setValidationErrors(new Map());
     } catch {
-      void showErrorToast('Failed to load schema details.');
+      showErrorToast('Failed to load schema details.');
     }
   }, []);
 
@@ -116,7 +126,7 @@ export function ConfigEditor(): React.JSX.Element {
 
   const handleSave = useCallback(async (): Promise<void> => {
     if (!runValidation()) {
-      void showWarningToast(`Fix ${String(validationErrors.size)} validation error(s) before saving.`);
+      showWarningToast(`Fix ${String(validationErrors.size)} validation error(s) before saving.`);
       return;
     }
 
@@ -130,7 +140,7 @@ export function ConfigEditor(): React.JSX.Element {
           json: { schemaId: selectedSchema.id, configData: formData },
         });
         setSavedState(JSON.stringify({ name: configName, schemaId: selectedSchema.id, data: formData }));
-        void showSuccessToast('Config updated successfully.');
+        showSuccessToast('Config updated successfully.');
       } else {
         const result = await api
           .post('configs', {
@@ -138,7 +148,8 @@ export function ConfigEditor(): React.JSX.Element {
           })
           .json<Config>();
         setSavedState(JSON.stringify({ name: configName, schemaId: selectedSchema.id, data: formData }));
-        void showSuccessToast('Config created successfully.');
+        showSuccessToast('Config created successfully.');
+        skipBlockRef.current = true;
         void navigate(`/configs/${result.id}`, { replace: true });
       }
     } catch (error: unknown) {
@@ -153,7 +164,7 @@ export function ConfigEditor(): React.JSX.Element {
       const action = statusToAction(newStatus);
       await api.post(`configs/${id as string}/${action}`);
       setConfigStatus(newStatus);
-      void showSuccessToast(`Config ${statusActionLabel(action)}.`);
+      showSuccessToast(`Config ${statusActionLabel(action)}.`);
     },
     [id],
   );
@@ -167,7 +178,7 @@ export function ConfigEditor(): React.JSX.Element {
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-        <Spinner size={50} />
+        <Spin size="large" />
       </div>
     );
   }
@@ -176,7 +187,7 @@ export function ConfigEditor(): React.JSX.Element {
     <div className="pokey-config-editor">
       <div className="pokey-config-editor-topbar">
         <div className="pokey-config-editor-topbar-left">
-          <InputGroup
+          <Input
             value={configName}
             onChange={(e): void => {
               setConfigName(e.target.value);
@@ -187,7 +198,13 @@ export function ConfigEditor(): React.JSX.Element {
             style={{ maxWidth: 300 }}
           />
           {isEditMode ? (
-            <InputGroup value={selectedSchema?.name ?? ''} readOnly leftIcon="database" aria-label="Schema" style={{ maxWidth: 250 }} />
+            <Input
+              value={selectedSchema?.name ?? ''}
+              readOnly
+              prefix={<DatabaseOutlined />}
+              aria-label="Schema"
+              style={{ maxWidth: 250 }}
+            />
           ) : (
             <SchemaSelector
               value={selectedSchema}
@@ -202,44 +219,46 @@ export function ConfigEditor(): React.JSX.Element {
         </div>
         <div className="pokey-config-editor-topbar-right">
           <Button
-            intent="success"
-            text={saving ? 'Saving...' : 'Save Config'}
-            icon="floppy-disk"
+            type="primary"
+            icon={<SaveOutlined />}
             disabled={!canSave}
             loading={saving}
             onClick={(): void => {
               void handleSave();
             }}
-          />
+            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+          >
+            {saving ? 'Saving...' : 'Save Config'}
+          </Button>
           <Button
-            variant="minimal"
-            text="Cancel"
+            type="text"
             onClick={(): void => {
               void navigate('/configs');
             }}
-          />
+          >
+            Cancel
+          </Button>
         </div>
       </div>
 
       <div className="pokey-config-editor-body">
         {!schemaData ? (
-          <NonIdealState icon="database" title="Select a schema" description="Select a schema to begin configuring." />
+          <Result icon={<DatabaseOutlined />} title="Select a schema" subTitle="Select a schema to begin configuring." />
         ) : (
           <DynamicFormRenderer schema={schemaData} data={formData} onChange={handleFormChange} errors={validationErrors} />
         )}
       </div>
 
-      <Alert
-        isOpen={blocker.state === 'blocked'}
-        confirmButtonText="Leave"
-        cancelButtonText="Stay"
-        intent="warning"
-        icon="warning-sign"
-        onConfirm={(): void => blocker.proceed?.()}
+      <Modal
+        open={blocker.state === 'blocked'}
+        title="Unsaved Changes"
+        okText="Leave"
+        cancelText="Stay"
+        onOk={(): void => blocker.proceed?.()}
         onCancel={(): void => blocker.reset?.()}
       >
         <p>You have unsaved changes. Leave without saving?</p>
-      </Alert>
+      </Modal>
     </div>
   );
 }
@@ -254,22 +273,22 @@ async function handleSaveError(error: unknown): Promise<void> {
       const details = body.details ?? body.error ?? '';
 
       if (status === 406) {
-        void showWarningToast(`Config data does not conform to the schema: ${details}`);
+        showWarningToast(`Config data does not conform to the schema: ${details}`);
       } else if (status === 409) {
-        void showWarningToast('A config with this name already exists.');
+        showWarningToast('A config with this name already exists.');
       } else if (status === 422) {
-        void showErrorToast(`Config data is malformed: ${details}`);
+        showErrorToast(`Config data is malformed: ${details}`);
       } else if (status >= 500) {
-        void showErrorToast('Server error — please try again.');
+        showErrorToast('Server error — please try again.');
       } else {
-        void showErrorToast(details || 'An unexpected error occurred.');
+        showErrorToast(details || 'An unexpected error occurred.');
       }
     } catch {
-      void showErrorToast('Server error — please try again.');
+      showErrorToast('Server error — please try again.');
     }
   } else if (error instanceof TypeError) {
-    void showErrorToast('Unable to reach the server. Check your connection.');
+    showErrorToast('Unable to reach the server. Check your connection.');
   } else {
-    void showErrorToast('An unexpected error occurred.');
+    showErrorToast('An unexpected error occurred.');
   }
 }

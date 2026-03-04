@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Dialog, DialogBody, DialogFooter, Button, TextArea, Callout } from '@blueprintjs/core';
+import { Modal, Button, Input, Alert } from 'antd';
 import { validateSchema } from '../../utils/schema/schema-validation';
 
 type JsonSchema = Record<string, unknown>;
@@ -39,40 +39,45 @@ export function EditJsonModal({ isOpen, schema, onAccept, onCancel }: EditJsonMo
     onAccept(parsed);
   }, [jsonText, onAccept]);
 
+  const handleAfterOpenChange = useCallback(
+    (open: boolean): void => {
+      if (open) {
+        handleOpen();
+      }
+    },
+    [handleOpen],
+  );
+
+  const footer = (
+    <>
+      <Button onClick={onCancel}>Cancel</Button>
+      <Button type="primary" onClick={handleOk}>
+        OK
+      </Button>
+    </>
+  );
+
   return (
-    <Dialog
-      isOpen={isOpen}
+    <Modal
+      open={isOpen}
       title="Edit JSON Schema"
-      onOpening={handleOpen}
-      onClose={onCancel}
-      style={{ width: 700, minHeight: 500 }}
-      canOutsideClickClose={false}
+      onCancel={onCancel}
+      afterOpenChange={handleAfterOpenChange}
+      width={700}
+      mask={{ closable: false }}
+      footer={footer}
+      destroyOnHidden
     >
-      <DialogBody>
-        <TextArea
-          value={jsonText}
-          onChange={(e): void => {
-            setJsonText(e.target.value);
-            setError(null);
-          }}
-          fill
-          style={{ fontFamily: '"Roboto Mono", monospace', fontSize: 13, minHeight: 400 }}
-          aria-label="JSON Schema editor"
-        />
-        {error && (
-          <Callout intent="danger" style={{ marginTop: 10 }}>
-            {error}
-          </Callout>
-        )}
-      </DialogBody>
-      <DialogFooter
-        actions={
-          <>
-            <Button text="Cancel" onClick={onCancel} />
-            <Button intent="primary" text="OK" onClick={handleOk} />
-          </>
-        }
+      <Input.TextArea
+        value={jsonText}
+        onChange={(e): void => {
+          setJsonText(e.target.value);
+          setError(null);
+        }}
+        style={{ fontFamily: '"Roboto Mono", monospace', fontSize: 13, minHeight: 400, width: '100%' }}
+        aria-label="JSON Schema editor"
       />
-    </Dialog>
+      {error && <Alert type="error" showIcon style={{ marginTop: 10 }} title={error} />}
+    </Modal>
   );
 }

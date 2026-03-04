@@ -120,6 +120,48 @@ export function getAncestorIds(root: SchemaNode, targetId: string): string[] {
   return path;
 }
 
+export function getNodePath(root: SchemaNode, targetId: string): SchemaNode[] {
+  const path: SchemaNode[] = [];
+
+  function walk(node: SchemaNode): boolean {
+    path.push(node);
+    if (node.id === targetId) return true;
+    for (const child of node.children) {
+      if (walk(child)) return true;
+    }
+    path.pop();
+    return false;
+  }
+
+  walk(root);
+  return path;
+}
+
 export function hasProperties(root: SchemaNode): boolean {
   return root.children.filter((c) => c.group !== 'definitions').length > 0;
+}
+
+export function findParent(root: SchemaNode, nodeId: string): SchemaNode | undefined {
+  for (const child of root.children) {
+    if (child.id === nodeId) return root;
+    const found = findParent(child, nodeId);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+export function hasDuplicateSiblingNames(node: SchemaNode): boolean {
+  const childNames = node.children.filter((c) => c.group !== 'definitions' && !c.name.startsWith('(')).map((c) => c.name);
+  if (new Set(childNames).size !== childNames.length) return true;
+  return node.children.some((c) => hasDuplicateSiblingNames(c));
+}
+
+export function getUniqueSiblingName(baseName: string, siblings: SchemaNode[]): string {
+  const names = new Set(siblings.map((s) => s.name));
+  if (!names.has(baseName)) return baseName;
+  let counter = 2;
+  while (names.has(`${baseName}${String(counter)}`)) {
+    counter++;
+  }
+  return `${baseName}${String(counter)}`;
 }

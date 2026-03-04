@@ -1,4 +1,5 @@
-import { Navbar, Tag, H3, Button, Popover, Menu, MenuItem, MenuDivider } from '@blueprintjs/core';
+import { Tag, Button, Dropdown } from 'antd';
+import { SettingOutlined, UserOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/use-auth';
 import { Logo } from '../Logo';
@@ -24,42 +25,66 @@ export function Page({ children }: PageProps): React.JSX.Element {
     void navigate('/');
   }
 
-  const userMenu = (
-    <Menu className="aura-session-menu">
-      <MenuItem text={userRole} disabled icon="user" />
-      <MenuDivider />
-      <MenuItem text="Sign out" intent="danger" icon="log-out" onClick={signOut} />
-    </Menu>
-  );
+  const userMenuItems = [
+    {
+      key: 'role',
+      label: userRole,
+      disabled: true,
+      icon: <UserOutlined />,
+    },
+    { type: 'divider' as const },
+    {
+      key: 'signout',
+      label: 'Sign out',
+      danger: true,
+      icon: <LogoutOutlined />,
+      onClick: signOut,
+    },
+  ];
 
   return (
     <div className="aura-page">
       <div className="aura-page-nav">
-        <Navbar>
-          <Navbar.Group align="left">
-            <Navbar.Heading onClick={handleLogoClick}>
+        <div className="aura-navbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
               <Logo />
-            </Navbar.Heading>
-            <Button variant="minimal" icon="cog" text="Pokey" active onClick={handleLogoClick} />
-          </Navbar.Group>
+            </div>
+            <Button type="text" icon={<SettingOutlined />} onClick={handleLogoClick}>
+              Pokey
+            </Button>
+          </div>
 
-          <Navbar.Group align="right">
-            <Tag className="aura-page-env" interactive>
-              {currentStage.toUpperCase()}
-            </Tag>
-            <Navbar.Divider />
-            <Popover content={userMenu} placement="bottom-end">
-              <Button variant="minimal" icon="user" text={userAlias} />
-            </Popover>
-          </Navbar.Group>
-        </Navbar>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+            <Tag className="aura-page-env">{currentStage.toUpperCase()}</Tag>
+            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" trigger={['click']}>
+              <Button type="text" icon={<UserOutlined />}>
+                {userAlias}
+              </Button>
+            </Dropdown>
+          </div>
+        </div>
       </div>
 
       <div className="aura-page-head">
-        <H3 className="aura-page-head-title">Pokey</H3>
+        <h3 className="aura-page-head-title">Pokey</h3>
         <div className="aura-page-head-subnav">
-          <Button variant={isSchemas ? 'outlined' : 'minimal'} text="Schemas" onClick={(): void => void navigate('/schemas')} />
-          <Button variant={isConfigs ? 'outlined' : 'minimal'} text="Configs" onClick={(): void => void navigate('/configs')} />
+          <Button
+            type={isSchemas ? 'default' : 'text'}
+            onClick={(): void => {
+              void navigate('/schemas');
+            }}
+          >
+            Schemas
+          </Button>
+          <Button
+            type={isConfigs ? 'default' : 'text'}
+            onClick={(): void => {
+              void navigate('/configs');
+            }}
+          >
+            Configs
+          </Button>
         </div>
       </div>
 

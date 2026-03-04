@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { FormGroup, InputGroup, NumericInput, Switch, TextArea, HTMLSelect, Card, Icon } from '@blueprintjs/core';
+import { Input, InputNumber, Switch, Select, Card } from 'antd';
 import { ArrayField } from './ArrayField';
 import { resolveFieldControl } from '../../utils/config/field-renderer';
 
@@ -11,6 +11,26 @@ interface DynamicFormRendererProps {
   onChange: (data: Record<string, unknown>) => void;
   errors: Map<string, string>;
   path?: string;
+}
+
+function FormFieldWrapper({
+  label,
+  helperText,
+  error,
+  children,
+}: {
+  label: React.ReactNode | null;
+  helperText: string | undefined;
+  error: string | undefined;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      {label != null && <div style={{ marginBottom: 4 }}>{label}</div>}
+      {children}
+      <div style={{ color: error ? '#ff4d4f' : '#999', fontSize: 12, marginTop: 4 }}>{helperText}</div>
+    </div>
+  );
 }
 
 export const DynamicFormRenderer = React.memo(function DynamicFormRenderer({
@@ -99,66 +119,65 @@ const FieldRenderer = React.memo(function FieldRenderer({
   );
 
   if (controlType === 'enum-select') {
+    const selectValue = typeof value === 'string' ? value : typeof defaultValue === 'string' ? defaultValue : '';
+    const options = [{ value: '', label: 'Select...' }, ...(enumValues ?? []).map((v) => ({ value: String(v), label: String(v) }))];
     return (
-      <FormGroup label={label} helperText={error ?? description} intent={error ? 'danger' : undefined}>
-        <HTMLSelect
-          value={typeof value === 'string' ? value : typeof defaultValue === 'string' ? defaultValue : ''}
-          onChange={(e): void => {
-            onChange(e.target.value || undefined);
+      <FormFieldWrapper label={label} helperText={error ?? description} error={error}>
+        <Select
+          value={selectValue}
+          onChange={(v): void => {
+            onChange(v || undefined);
           }}
+          options={options}
           aria-label={fieldName}
-        >
-          <option value="">Select...</option>
-          {enumValues.map((v) => (
-            <option key={String(v)} value={String(v)}>
-              {String(v)}
-            </option>
-          ))}
-        </HTMLSelect>
-      </FormGroup>
+          style={{ width: '100%' }}
+        />
+      </FormFieldWrapper>
     );
   }
 
   if (controlType === 'date-input' || controlType === 'textarea' || controlType === 'text-input') {
     if (controlType === 'date-input') {
+      const dateValue = typeof value === 'string' ? value : typeof defaultValue === 'string' ? defaultValue : '';
       return (
-        <FormGroup label={label} helperText={error ?? description} intent={error ? 'danger' : undefined}>
-          <InputGroup
+        <FormFieldWrapper label={label} helperText={error ?? description} error={error}>
+          <Input
             type="datetime-local"
-            value={typeof value === 'string' ? value : typeof defaultValue === 'string' ? defaultValue : ''}
+            value={dateValue}
             onChange={(e): void => {
               onChange(e.target.value || undefined);
             }}
-            intent={error ? 'danger' : undefined}
+            status={error ? 'error' : undefined}
             aria-label={fieldName}
           />
-        </FormGroup>
+        </FormFieldWrapper>
       );
     }
 
+    const textValue = typeof value === 'string' ? value : typeof defaultValue === 'string' ? defaultValue : '';
     return (
-      <FormGroup label={label} helperText={error ?? description} intent={error ? 'danger' : undefined}>
+      <FormFieldWrapper label={label} helperText={error ?? description} error={error}>
         {controlType === 'textarea' ? (
-          <TextArea
-            value={typeof value === 'string' ? value : typeof defaultValue === 'string' ? defaultValue : ''}
+          <Input.TextArea
+            value={textValue}
             onChange={(e): void => {
               onChange(e.target.value);
             }}
-            fill
-            intent={error ? 'danger' : undefined}
+            style={{ width: '100%' }}
+            status={error ? 'error' : undefined}
             aria-label={fieldName}
           />
         ) : (
-          <InputGroup
-            value={typeof value === 'string' ? value : typeof defaultValue === 'string' ? defaultValue : ''}
+          <Input
+            value={textValue}
             onChange={(e): void => {
               onChange(e.target.value);
             }}
-            intent={error ? 'danger' : undefined}
+            status={error ? 'error' : undefined}
             aria-label={fieldName}
           />
         )}
-      </FormGroup>
+      </FormFieldWrapper>
     );
   }
 
@@ -167,37 +186,41 @@ const FieldRenderer = React.memo(function FieldRenderer({
     const min = fieldSchema.minimum as number | undefined;
     const max = fieldSchema.maximum as number | undefined;
     const step = fieldType === 'integer' ? 1 : undefined;
+    const numValue = typeof value === 'number' ? value : typeof defaultValue === 'number' ? defaultValue : undefined;
 
     return (
-      <FormGroup label={label} helperText={error ?? description} intent={error ? 'danger' : undefined}>
-        <NumericInput
-          value={typeof value === 'number' ? value : typeof defaultValue === 'number' ? defaultValue : undefined}
-          onValueChange={(v): void => {
-            onChange(Number.isNaN(v) ? undefined : v);
+      <FormFieldWrapper label={label} helperText={error ?? description} error={error}>
+        <InputNumber
+          value={numValue}
+          onChange={(v): void => {
+            onChange(v === null ? undefined : v);
           }}
           min={min}
           max={max}
-          stepSize={step}
-          intent={error ? 'danger' : undefined}
+          step={step}
+          status={error ? 'error' : undefined}
           aria-label={fieldName}
+          style={{ width: '100%' }}
         />
-      </FormGroup>
+      </FormFieldWrapper>
     );
   }
 
   if (controlType === 'boolean-switch') {
     const boolValue = typeof value === 'boolean' ? value : typeof defaultValue === 'boolean' ? defaultValue : false;
     return (
-      <FormGroup helperText={error ?? description} intent={error ? 'danger' : undefined}>
-        <Switch
-          checked={boolValue}
-          label={displayLabel}
-          onChange={(): void => {
-            onChange(!boolValue);
-          }}
-          aria-label={fieldName}
-        />
-      </FormGroup>
+      <FormFieldWrapper label={null} helperText={error ?? description} error={error}>
+        <div>
+          <Switch
+            checked={boolValue}
+            onChange={(checked): void => {
+              onChange(checked);
+            }}
+            aria-label={fieldName}
+          />
+          <span style={{ marginLeft: 8 }}>{displayLabel}</span>
+        </div>
+      </FormFieldWrapper>
     );
   }
 
@@ -206,7 +229,7 @@ const FieldRenderer = React.memo(function FieldRenderer({
     return (
       <Card className="pokey-form-object-card" style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          <Icon icon="folder-open" size={14} />
+          <span style={{ fontWeight: 'bold', fontSize: 14, fontFamily: 'monospace' }}>{'{}'}</span>
           <strong>{displayLabel}</strong>
           {isRequired && <span style={{ color: '#db3737' }}>*</span>}
         </div>
@@ -247,15 +270,16 @@ const FieldRenderer = React.memo(function FieldRenderer({
     );
   }
 
+  const fallbackValue = typeof value === 'string' ? value : JSON.stringify(value ?? '');
   return (
-    <FormGroup label={label} helperText={error ?? description ?? `Unsupported field type`} intent={error ? 'danger' : undefined}>
-      <InputGroup
-        value={typeof value === 'string' ? value : JSON.stringify(value ?? '')}
+    <FormFieldWrapper label={label} helperText={error ?? description ?? 'Unsupported field type'} error={error}>
+      <Input
+        value={fallbackValue}
         onChange={(e): void => {
           onChange(e.target.value);
         }}
         aria-label={fieldName}
       />
-    </FormGroup>
+    </FormFieldWrapper>
   );
 });

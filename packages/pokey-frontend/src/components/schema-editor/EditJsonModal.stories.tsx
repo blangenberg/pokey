@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button } from '@blueprintjs/core';
+import { Button } from 'antd';
 import { EditJsonModal } from './EditJsonModal';
 import type { Story } from '@ladle/react';
 
@@ -21,11 +21,12 @@ export const Default: Story = (): React.JSX.Element => {
   return (
     <div style={{ padding: 16 }}>
       <Button
-        text="Open Modal"
         onClick={(): void => {
           setIsOpen(true);
         }}
-      />
+      >
+        Open Modal
+      </Button>
       <EditJsonModal
         isOpen={isOpen}
         schema={schema}
@@ -48,11 +49,12 @@ export const EmptySchema: Story = (): React.JSX.Element => {
   return (
     <div style={{ padding: 16 }}>
       <Button
-        text="Open Modal"
         onClick={(): void => {
           setIsOpen(true);
         }}
-      />
+      >
+        Open Modal
+      </Button>
       <EditJsonModal
         isOpen={isOpen}
         schema={{}}

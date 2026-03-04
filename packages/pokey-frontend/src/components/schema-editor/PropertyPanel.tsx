@@ -1,42 +1,126 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
+import { Input, InputNumber, Switch, Select, Collapse, Result } from 'antd';
 import {
-  FormGroup,
-  InputGroup,
-  TextArea,
-  Switch,
-  NumericInput,
-  HTMLSelect,
-  NonIdealState,
-  TagInput,
-  Section,
-  SectionCard,
-} from '@blueprintjs/core';
+  SettingOutlined,
+  UnorderedListOutlined,
+  FontSizeOutlined,
+  NumberOutlined,
+  CheckSquareOutlined,
+  QuestionCircleOutlined,
+} from '@ant-design/icons';
 import type { SchemaNode, SchemaNodeType } from '../../utils/schema/schema-types';
-import { displayNameToId } from '../../utils/schema/schema-mapping';
+import { displayNameToId, treeToJsonSchema } from '../../utils/schema/schema-mapping';
 
 interface PropertyPanelProps {
   node: SchemaNode | null;
   onUpdate: (id: string, updates: Partial<SchemaNode>) => void;
+  onSelect: (id: string) => void;
+  siblingNames?: Set<string>;
+  nodePath?: SchemaNode[];
 }
 
 const STRING_FORMAT_OPTIONS = [
-  '',
-  'email',
-  'uri',
-  'uri-reference',
-  'date',
-  'date-time',
-  'time',
-  'hostname',
-  'ipv4',
-  'ipv6',
-  'uuid',
-  'json-pointer',
-  'relative-json-pointer',
-  'regex',
+  { value: '', label: 'None' },
+  { value: 'email', label: 'email' },
+  { value: 'uri', label: 'uri' },
+  { value: 'uri-reference', label: 'uri-reference' },
+  { value: 'date', label: 'date' },
+  { value: 'date-time', label: 'date-time' },
+  { value: 'time', label: 'time' },
+  { value: 'hostname', label: 'hostname' },
+  { value: 'ipv4', label: 'ipv4' },
+  { value: 'ipv6', label: 'ipv6' },
+  { value: 'uuid', label: 'uuid' },
+  { value: 'json-pointer', label: 'json-pointer' },
+  { value: 'relative-json-pointer', label: 'relative-json-pointer' },
+  { value: 'regex', label: 'regex' },
 ];
 
-export const PropertyPanel = React.memo(function PropertyPanel({ node, onUpdate }: PropertyPanelProps): React.JSX.Element {
+function FormField({
+  label,
+  helperText,
+  error,
+  children,
+}: {
+  label: string;
+  helperText?: string;
+  error?: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <label style={{ display: 'block', marginBottom: 4 }}>{label}</label>
+      {children}
+      {error && <div style={{ color: '#ff4d4f', fontSize: 12, marginTop: 4 }}>{error}</div>}
+      {!error && helperText && <div style={{ color: '#999', fontSize: 12, marginTop: 4 }}>{helperText}</div>}
+    </div>
+  );
+}
+
+function SwitchWithLabel({
+  checked,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  label: string;
+  onChange: (checked: boolean) => void;
+}): React.JSX.Element {
+  return (
+    <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <Switch checked={checked} onChange={onChange} />
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function getBreadcrumbLabel(n: SchemaNode): string {
+  if (n.name === '(items)') return 'List Type';
+  return n.displayName;
+}
+
+function getBreadcrumbTypeLabel(n: SchemaNode): string | null {
+  if (n.compositionKind) {
+    const labels: Record<string, string> = { allOf: 'All Of', anyOf: 'Any Of', oneOf: 'One Of', not: 'Not', 'if/then/else': 'Conditional' };
+    return labels[n.compositionKind] ?? null;
+  }
+  if (!n.type) return null;
+  const labels: Record<string, string> = {
+    string: 'Text',
+    number: 'Number',
+    integer: 'Integer',
+    boolean: 'True / False',
+    object: 'Object',
+    array: 'List',
+  };
+  return labels[n.type] ?? null;
+}
+
+function getTypeIcon(type: SchemaNodeType): React.ReactNode {
+  switch (type) {
+    case 'object':
+      return <span style={{ fontWeight: 'bold', fontSize: 14, fontFamily: 'monospace' }}>{'{}'}</span>;
+    case 'array':
+      return <UnorderedListOutlined />;
+    case 'string':
+      return <FontSizeOutlined />;
+    case 'number':
+    case 'integer':
+      return <NumberOutlined />;
+    case 'boolean':
+      return <CheckSquareOutlined />;
+    default:
+      return <QuestionCircleOutlined />;
+  }
+}
+
+export const PropertyPanel = React.memo(function PropertyPanel({
+  node,
+  onUpdate,
+  onSelect,
+  siblingNames,
+  nodePath,
+}: PropertyPanelProps): React.JSX.Element {
   const updateKeyword = useCallback(
     (key: string, value: unknown): void => {
       if (!node) return;
@@ -70,174 +154,166 @@ export const PropertyPanel = React.memo(function PropertyPanel({ node, onUpdate 
     [node, onUpdate],
   );
 
-  if (!node) {
+  const rootJsonPreview = useMemo((): string | null => {
+    if (!node || node.name !== 'schema' || node.type !== 'object') return null;
+    return JSON.stringify(treeToJsonSchema(node), null, 2);
+  }, [node]);
+
+  const breadcrumbElements = useMemo((): React.ReactNode => {
+    if (!nodePath || nodePath.length === 0 || !node) return null;
     return (
-      <NonIdealState icon="properties" title="No node selected" description="Select a node in the tree to configure its properties." />
+      <div className="pokey-property-panel-breadcrumbs">
+        {nodePath.map((n, i) => {
+          const isLast = i === nodePath.length - 1;
+          const label = getBreadcrumbLabel(n);
+          const typeLabel = getBreadcrumbTypeLabel(n);
+          return (
+            <React.Fragment key={n.id}>
+              {i > 0 && <span className="pokey-breadcrumb-separator">&rsaquo;</span>}
+              {isLast ? (
+                <span className="pokey-breadcrumb-current">
+                  {label}
+                  {typeLabel ? <span className="pokey-breadcrumb-type"> ({typeLabel})</span> : null}
+                </span>
+              ) : (
+                <span
+                  className="pokey-breadcrumb-ancestor"
+                  onClick={(): void => {
+                    onSelect(n.id);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
+                  {label}
+                  {typeLabel ? <span className="pokey-breadcrumb-type"> ({typeLabel})</span> : null}
+                </span>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    );
+  }, [nodePath, node, onSelect]);
+
+  if (!node) {
+    return <Result icon={<SettingOutlined />} title="No node selected" subTitle="Select a node in the tree to configure its properties." />;
+  }
+
+  if (rootJsonPreview !== null) {
+    return (
+      <div className="pokey-property-panel">
+        {breadcrumbElements}
+        <Input.TextArea
+          value={rootJsonPreview}
+          readOnly
+          style={{ fontFamily: '"Roboto Mono", monospace', fontSize: 13, minHeight: 400, width: '100%' }}
+          aria-label="JSON Schema preview"
+        />
+      </div>
     );
   }
 
-  const isRoot = node.name === 'root' && node.type === 'object';
+  const nameConflict = siblingNames?.has(node.name) === true;
+  const isItemsNode = node.name === '(items)';
 
   return (
     <div className="pokey-property-panel">
-      <h4 className="pokey-property-panel-header">Configuration: {node.displayName}</h4>
+      {breadcrumbElements}
 
-      <Section title="General" collapsible defaultIsOpen>
-        <SectionCard>
-          <FormGroup label="Display Name">
-            <InputGroup value={node.displayName} onChange={handleDisplayNameChange} disabled={isRoot} aria-label="Display Name" />
-          </FormGroup>
+      <Collapse
+        defaultActiveKey={['general']}
+        items={[
+          {
+            key: 'general',
+            label: 'General',
+            children: (
+              <div>
+                {node.type && (
+                  <div className="pokey-property-type-badge">
+                    <span className="pokey-property-type-badge-icon">{getTypeIcon(node.type)}</span>
+                    <span>{getTypeDisplayLabel(node.type)}</span>
+                  </div>
+                )}
 
-          <FormGroup label="ID" helperText="Auto-generated from display name">
-            <InputGroup value={node.name} readOnly aria-label="Property ID" />
-          </FormGroup>
+                {!isItemsNode && (
+                  <>
+                    <FormField label="Display Name">
+                      <Input value={node.displayName} onChange={handleDisplayNameChange} aria-label="Display Name" />
+                    </FormField>
 
-          {node.type && !isRoot && (
-            <FormGroup label="Type">
-              <InputGroup value={getTypeDisplayLabel(node.type)} readOnly aria-label="Type" />
-            </FormGroup>
-          )}
+                    <FormField
+                      label="ID"
+                      helperText="Auto-generated from display name"
+                      error={nameConflict ? `Duplicate property ID "${node.name}" at this level` : undefined}
+                    >
+                      <Input value={node.name} readOnly aria-label="Property ID" status={nameConflict ? 'error' : undefined} />
+                    </FormField>
+                  </>
+                )}
 
-          <FormGroup label="Description">
-            <TextArea
-              value={node.description ?? ''}
-              onChange={(e): void => {
-                updateField('description', e.target.value || undefined);
-              }}
-              fill
-              aria-label="Description"
-            />
-          </FormGroup>
+                <FormField label="Description">
+                  <Input.TextArea
+                    value={(node.keywords.description as string | undefined) ?? ''}
+                    onChange={(e): void => {
+                      updateKeyword('description', e.target.value || undefined);
+                    }}
+                    aria-label="Description"
+                    style={{ width: '100%' }}
+                  />
+                </FormField>
 
-          {!isRoot && (
-            <Switch
-              checked={node.required}
-              label="Required Field"
-              onChange={(): void => {
-                updateField('required', !node.required);
-              }}
-            />
-          )}
+                {!isItemsNode && (
+                  <SwitchWithLabel
+                    checked={node.required}
+                    label="Required Field"
+                    onChange={(checked): void => {
+                      updateField('required', checked);
+                    }}
+                  />
+                )}
 
-          <FormGroup label="Default">
-            <InputGroup
-              value={typeof node.keywords.default === 'string' ? node.keywords.default : JSON.stringify(node.keywords.default ?? '')}
-              onChange={(e): void => {
-                updateKeyword('default', e.target.value || undefined);
-              }}
-              aria-label="Default value"
-            />
-          </FormGroup>
-
-          <FormGroup label="Enum (allowed values)">
-            <TagInput
-              values={(node.keywords.enum as string[] | undefined) ?? []}
-              onAdd={(values): void => {
-                const current = (node.keywords.enum as string[] | undefined) ?? [];
-                updateKeyword('enum', [...current, ...values]);
-              }}
-              onRemove={(_value, index): void => {
-                const current = [...((node.keywords.enum as string[] | undefined) ?? [])];
-                current.splice(index, 1);
-                updateKeyword('enum', current.length > 0 ? current : undefined);
-              }}
-              placeholder="Add value..."
-              aria-label="Enum values"
-            />
-          </FormGroup>
-
-          <FormGroup label="Const">
-            <InputGroup
-              value={typeof node.keywords.const === 'string' ? node.keywords.const : JSON.stringify(node.keywords.const ?? '')}
-              onChange={(e): void => {
-                updateKeyword('const', e.target.value || undefined);
-              }}
-              aria-label="Const value"
-            />
-          </FormGroup>
-
-          <FormGroup label="Group">
-            <InputGroup
-              value={node.group ?? ''}
-              onChange={(e): void => {
-                updateField('group', e.target.value || undefined);
-              }}
-              aria-label="Group"
-            />
-          </FormGroup>
-        </SectionCard>
-      </Section>
+                {node.type && node.type !== 'object' && node.type !== 'array' && (
+                  <FormField label="Enum (allowed values)">
+                    <Select
+                      mode="tags"
+                      value={(node.keywords.enum as string[] | undefined) ?? []}
+                      onChange={(values: string[]): void => {
+                        updateKeyword('enum', values.length > 0 ? values : undefined);
+                      }}
+                      placeholder="Add value..."
+                      style={{ width: '100%' }}
+                      aria-label="Enum values"
+                    />
+                  </FormField>
+                )}
+              </div>
+            ),
+          },
+        ]}
+      />
 
       {renderValidationSection(node.type, node.keywords, updateKeyword)}
 
-      <Section title="Metadata" collapsible defaultIsOpen={false}>
-        <SectionCard>
-          <FormGroup label="Title">
-            <InputGroup
-              value={node.title ?? ''}
-              onChange={(e): void => {
-                updateField('title', e.target.value || undefined);
-              }}
-              aria-label="Title"
-            />
-          </FormGroup>
-
-          <FormGroup label="Examples (JSON array)">
-            <TextArea
-              value={node.keywords.examples ? JSON.stringify(node.keywords.examples) : ''}
-              onChange={(e): void => {
-                try {
-                  const parsed = JSON.parse(e.target.value) as unknown;
-                  updateKeyword('examples', parsed);
-                } catch {
-                  /* allow mid-edit invalid JSON */
-                }
-              }}
-              fill
-              aria-label="Examples"
-            />
-          </FormGroup>
-
-          <Switch
-            checked={Boolean(node.keywords.readOnly)}
-            label="Read Only"
-            onChange={(): void => {
-              updateKeyword('readOnly', node.keywords.readOnly ? undefined : true);
-            }}
-          />
-
-          <Switch
-            checked={Boolean(node.keywords.writeOnly)}
-            label="Write Only"
-            onChange={(): void => {
-              updateKeyword('writeOnly', node.keywords.writeOnly ? undefined : true);
-            }}
-          />
-
-          <FormGroup label="$comment">
-            <InputGroup
-              value={(node.keywords.$comment as string | undefined) ?? ''}
-              onChange={(e): void => {
-                updateKeyword('$comment', e.target.value || undefined);
-              }}
-              aria-label="Comment"
-            />
-          </FormGroup>
-        </SectionCard>
-      </Section>
-
       {Object.keys(node.extraKeywords).length > 0 && (
-        <Section title="Advanced (Additional Keywords)" collapsible defaultIsOpen={false}>
-          <SectionCard>
-            <TextArea
-              value={JSON.stringify(node.extraKeywords, null, 2)}
-              readOnly
-              fill
-              style={{ fontFamily: 'monospace', minHeight: 120 }}
-              aria-label="Additional keywords"
-            />
-          </SectionCard>
-        </Section>
+        <Collapse
+          defaultActiveKey={[]}
+          items={[
+            {
+              key: 'advanced',
+              label: 'Advanced (Additional Keywords)',
+              children: (
+                <div>
+                  <Input.TextArea
+                    value={JSON.stringify(node.extraKeywords, null, 2)}
+                    readOnly
+                    style={{ fontFamily: 'monospace', minHeight: 120, width: '100%' }}
+                    aria-label="Additional keywords"
+                  />
+                </div>
+              ),
+            },
+          ]}
+        />
       )}
     </div>
   );
@@ -263,193 +339,178 @@ function renderValidationSection(
   if (!type) return null;
 
   const stringFields = type === 'string' && (
-    <SectionCard>
-      <FormGroup label="Min Length">
-        <NumericInput
+    <div>
+      <FormField label="Min Length">
+        <InputNumber
           value={keywords.minLength as number | undefined}
-          onValueChange={(v): void => {
-            updateKeyword('minLength', Number.isNaN(v) ? undefined : v);
+          onChange={(v: number | null): void => {
+            updateKeyword('minLength', v === null || Number.isNaN(v) ? undefined : v);
           }}
           min={0}
+          style={{ width: '100%' }}
           aria-label="Min Length"
         />
-      </FormGroup>
-      <FormGroup label="Max Length">
-        <NumericInput
+      </FormField>
+      <FormField label="Max Length">
+        <InputNumber
           value={keywords.maxLength as number | undefined}
-          onValueChange={(v): void => {
-            updateKeyword('maxLength', Number.isNaN(v) ? undefined : v);
+          onChange={(v: number | null): void => {
+            updateKeyword('maxLength', v === null || Number.isNaN(v) ? undefined : v);
           }}
           min={0}
+          style={{ width: '100%' }}
           aria-label="Max Length"
         />
-      </FormGroup>
-      <FormGroup label="Pattern (regex)">
-        <InputGroup
+      </FormField>
+      <FormField label="Pattern (regex)">
+        <Input
           value={(keywords.pattern as string | undefined) ?? ''}
           onChange={(e: React.ChangeEvent<HTMLInputElement>): void => {
             updateKeyword('pattern', e.target.value || undefined);
           }}
           aria-label="Pattern"
         />
-      </FormGroup>
-      <FormGroup label="Format">
-        <HTMLSelect
+      </FormField>
+      <FormField label="Format">
+        <Select
           value={(keywords.format as string | undefined) ?? ''}
-          onChange={(e): void => {
-            updateKeyword('format', e.target.value || undefined);
+          onChange={(v): void => {
+            updateKeyword('format', v || undefined);
           }}
+          options={STRING_FORMAT_OPTIONS}
+          style={{ width: '100%' }}
           aria-label="Format"
-        >
-          {STRING_FORMAT_OPTIONS.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt || 'None'}
-            </option>
-          ))}
-        </HTMLSelect>
-      </FormGroup>
-      <FormGroup label="Content Encoding">
-        <InputGroup
-          value={(keywords.contentEncoding as string | undefined) ?? ''}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>): void => {
-            updateKeyword('contentEncoding', e.target.value || undefined);
-          }}
-          aria-label="Content Encoding"
         />
-      </FormGroup>
-      <FormGroup label="Content Media Type">
-        <InputGroup
-          value={(keywords.contentMediaType as string | undefined) ?? ''}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>): void => {
-            updateKeyword('contentMediaType', e.target.value || undefined);
-          }}
-          aria-label="Content Media Type"
-        />
-      </FormGroup>
-    </SectionCard>
+      </FormField>
+    </div>
   );
 
   const numericFields = (type === 'number' || type === 'integer') && (
-    <SectionCard>
-      <FormGroup label="Minimum">
-        <NumericInput
+    <div>
+      <FormField label="Minimum">
+        <InputNumber
           value={keywords.minimum as number | undefined}
-          onValueChange={(v): void => {
-            updateKeyword('minimum', Number.isNaN(v) ? undefined : v);
+          onChange={(v: number | null): void => {
+            updateKeyword('minimum', v === null || Number.isNaN(v) ? undefined : v);
           }}
+          style={{ width: '100%' }}
           aria-label="Minimum"
         />
-      </FormGroup>
-      <FormGroup label="Maximum">
-        <NumericInput
+      </FormField>
+      <FormField label="Maximum">
+        <InputNumber
           value={keywords.maximum as number | undefined}
-          onValueChange={(v): void => {
-            updateKeyword('maximum', Number.isNaN(v) ? undefined : v);
+          onChange={(v: number | null): void => {
+            updateKeyword('maximum', v === null || Number.isNaN(v) ? undefined : v);
           }}
+          style={{ width: '100%' }}
           aria-label="Maximum"
         />
-      </FormGroup>
-      <FormGroup label="Exclusive Minimum">
-        <NumericInput
+      </FormField>
+      <FormField label="Exclusive Minimum">
+        <InputNumber
           value={keywords.exclusiveMinimum as number | undefined}
-          onValueChange={(v): void => {
-            updateKeyword('exclusiveMinimum', Number.isNaN(v) ? undefined : v);
+          onChange={(v: number | null): void => {
+            updateKeyword('exclusiveMinimum', v === null || Number.isNaN(v) ? undefined : v);
           }}
+          style={{ width: '100%' }}
           aria-label="Exclusive Minimum"
         />
-      </FormGroup>
-      <FormGroup label="Exclusive Maximum">
-        <NumericInput
+      </FormField>
+      <FormField label="Exclusive Maximum">
+        <InputNumber
           value={keywords.exclusiveMaximum as number | undefined}
-          onValueChange={(v): void => {
-            updateKeyword('exclusiveMaximum', Number.isNaN(v) ? undefined : v);
+          onChange={(v: number | null): void => {
+            updateKeyword('exclusiveMaximum', v === null || Number.isNaN(v) ? undefined : v);
           }}
+          style={{ width: '100%' }}
           aria-label="Exclusive Maximum"
         />
-      </FormGroup>
-      <FormGroup label="Multiple Of">
-        <NumericInput
+      </FormField>
+      <FormField label="Multiple Of">
+        <InputNumber
           value={keywords.multipleOf as number | undefined}
-          onValueChange={(v): void => {
-            updateKeyword('multipleOf', Number.isNaN(v) ? undefined : v);
+          onChange={(v: number | null): void => {
+            updateKeyword('multipleOf', v === null || Number.isNaN(v) ? undefined : v);
           }}
           min={0}
+          style={{ width: '100%' }}
           aria-label="Multiple Of"
         />
-      </FormGroup>
-    </SectionCard>
+      </FormField>
+    </div>
   );
 
   const arrayFields = type === 'array' && (
-    <SectionCard>
-      <FormGroup label="Min Items">
-        <NumericInput
+    <div>
+      <FormField label="Min Items">
+        <InputNumber
           value={keywords.minItems as number | undefined}
-          onValueChange={(v): void => {
-            updateKeyword('minItems', Number.isNaN(v) ? undefined : v);
+          onChange={(v: number | null): void => {
+            updateKeyword('minItems', v === null || Number.isNaN(v) ? undefined : v);
           }}
           min={0}
+          style={{ width: '100%' }}
           aria-label="Min Items"
         />
-      </FormGroup>
-      <FormGroup label="Max Items">
-        <NumericInput
+      </FormField>
+      <FormField label="Max Items">
+        <InputNumber
           value={keywords.maxItems as number | undefined}
-          onValueChange={(v): void => {
-            updateKeyword('maxItems', Number.isNaN(v) ? undefined : v);
+          onChange={(v: number | null): void => {
+            updateKeyword('maxItems', v === null || Number.isNaN(v) ? undefined : v);
           }}
           min={0}
+          style={{ width: '100%' }}
           aria-label="Max Items"
         />
-      </FormGroup>
-      <Switch
+      </FormField>
+      <SwitchWithLabel
         checked={Boolean(keywords.uniqueItems)}
         label="Unique Items"
-        onChange={(): void => {
-          updateKeyword('uniqueItems', keywords.uniqueItems ? undefined : true);
+        onChange={(checked): void => {
+          updateKeyword('uniqueItems', checked ? true : undefined);
         }}
       />
-    </SectionCard>
+    </div>
   );
 
   const objectFields = type === 'object' && (
-    <SectionCard>
-      <Switch
+    <div>
+      <SwitchWithLabel
         checked={keywords.additionalProperties !== false}
         label="Additional Properties"
-        onChange={(): void => {
-          updateKeyword('additionalProperties', keywords.additionalProperties === false ? undefined : false);
+        onChange={(checked): void => {
+          updateKeyword('additionalProperties', checked ? undefined : false);
         }}
       />
-      <FormGroup label="Min Properties">
-        <NumericInput
+      <FormField label="Min Properties">
+        <InputNumber
           value={keywords.minProperties as number | undefined}
-          onValueChange={(v): void => {
-            updateKeyword('minProperties', Number.isNaN(v) ? undefined : v);
+          onChange={(v: number | null): void => {
+            updateKeyword('minProperties', v === null || Number.isNaN(v) ? undefined : v);
           }}
           min={0}
+          style={{ width: '100%' }}
           aria-label="Min Properties"
         />
-      </FormGroup>
-      <FormGroup label="Max Properties">
-        <NumericInput
+      </FormField>
+      <FormField label="Max Properties">
+        <InputNumber
           value={keywords.maxProperties as number | undefined}
-          onValueChange={(v): void => {
-            updateKeyword('maxProperties', Number.isNaN(v) ? undefined : v);
+          onChange={(v: number | null): void => {
+            updateKeyword('maxProperties', v === null || Number.isNaN(v) ? undefined : v);
           }}
           min={0}
+          style={{ width: '100%' }}
           aria-label="Max Properties"
         />
-      </FormGroup>
-    </SectionCard>
+      </FormField>
+    </div>
   );
 
   const content = stringFields || numericFields || arrayFields || objectFields;
   if (!content) return null;
 
-  return (
-    <Section title="Validation" collapsible defaultIsOpen>
-      {content}
-    </Section>
-  );
+  return <Collapse defaultActiveKey={['validation']} items={[{ key: 'validation', label: 'Validation', children: content }]} />;
 }

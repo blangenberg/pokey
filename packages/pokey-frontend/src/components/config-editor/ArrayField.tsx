@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
-import { Button, Card, Icon } from '@blueprintjs/core';
+import { Button, Card, Input, InputNumber, Select, Switch } from 'antd';
+import { PlusOutlined, MinusOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { DynamicFormRenderer } from './DynamicFormRenderer';
 
 type JsonSchema = Record<string, unknown>;
@@ -62,12 +63,14 @@ export const ArrayField = React.memo(function ArrayField({
     <Card style={{ marginBottom: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Icon icon="list" size={14} />
+          <UnorderedListOutlined style={{ fontSize: 14 }} />
           <strong>{fieldName}</strong>
           {isRequired && <span style={{ color: '#db3737' }}>*</span>}
           <span style={{ opacity: 0.5, fontSize: 12 }}>({String(items.length)} items)</span>
         </div>
-        <Button icon="plus" size="small" text="Add Item" onClick={handleAdd} disabled={!canAdd} aria-label={`Add ${fieldName} item`} />
+        <Button icon={<PlusOutlined />} size="small" onClick={handleAdd} disabled={!canAdd} aria-label={`Add ${fieldName} item`}>
+          Add Item
+        </Button>
       </div>
 
       {description && <p style={{ opacity: 0.5, fontSize: 12, marginBottom: 8 }}>{description}</p>}
@@ -104,10 +107,10 @@ export const ArrayField = React.memo(function ArrayField({
             </div>
 
             <Button
-              icon="minus"
+              icon={<MinusOutlined />}
               size="small"
-              intent="danger"
-              variant="minimal"
+              danger
+              type="text"
               onClick={(): void => {
                 handleRemove(index);
               }}
@@ -131,70 +134,62 @@ function renderPrimitiveItem(
   const enumValues = schema.enum as unknown[] | undefined;
 
   if (enumValues) {
+    const selectValue = typeof value === 'string' ? value : undefined;
+    const options = [{ value: '', label: 'Select...' }, ...enumValues.map((v) => ({ value: String(v), label: String(v) }))];
     return (
-      <select
-        value={typeof value === 'string' ? value : ''}
-        onChange={(e): void => {
-          onChange(e.target.value || undefined);
+      <Select
+        value={selectValue ?? ''}
+        onChange={(v): void => {
+          onChange(v || undefined);
         }}
+        options={options}
         style={{ width: '100%' }}
-      >
-        <option value="">Select...</option>
-        {enumValues.map((v) => (
-          <option key={String(v)} value={String(v)}>
-            {String(v)}
-          </option>
-        ))}
-      </select>
+        status={error ? 'error' : undefined}
+      />
     );
   }
 
   if (type === 'string') {
     return (
-      <input
-        type="text"
-        className="bp5-input"
+      <Input
         value={typeof value === 'string' ? value : ''}
         onChange={(e): void => {
           onChange(e.target.value);
         }}
-        style={{ width: '100%', borderColor: error ? '#db3737' : undefined }}
+        style={{ width: '100%' }}
+        status={error ? 'error' : undefined}
       />
     );
   }
 
   if (type === 'number' || type === 'integer') {
+    const numValue = typeof value === 'number' ? value : undefined;
     return (
-      <input
-        type="number"
-        className="bp5-input"
-        value={typeof value === 'number' ? String(value) : ''}
-        onChange={(e): void => {
-          const num = type === 'integer' ? parseInt(e.target.value, 10) : parseFloat(e.target.value);
-          onChange(Number.isNaN(num) ? undefined : num);
+      <InputNumber
+        value={numValue}
+        onChange={(v): void => {
+          onChange(v === null ? undefined : v);
         }}
         step={type === 'integer' ? 1 : undefined}
-        style={{ width: '100%', borderColor: error ? '#db3737' : undefined }}
+        style={{ width: '100%' }}
+        status={error ? 'error' : undefined}
       />
     );
   }
 
   if (type === 'boolean') {
     return (
-      <input
-        type="checkbox"
+      <Switch
         checked={Boolean(value)}
-        onChange={(e): void => {
-          onChange(e.target.checked);
+        onChange={(checked): void => {
+          onChange(checked);
         }}
       />
     );
   }
 
   return (
-    <input
-      type="text"
-      className="bp5-input"
+    <Input
       value={typeof value === 'string' ? value : JSON.stringify(value ?? '')}
       onChange={(e): void => {
         onChange(e.target.value);

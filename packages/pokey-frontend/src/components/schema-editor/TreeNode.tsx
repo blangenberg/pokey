@@ -1,35 +1,43 @@
 import React, { useCallback } from 'react';
-import { Icon, Button } from '@blueprintjs/core';
+import { Button, Tooltip } from 'antd';
+import {
+  UnorderedListOutlined,
+  FontSizeOutlined,
+  NumberOutlined,
+  CheckSquareOutlined,
+  QuestionCircleOutlined,
+  DownOutlined,
+  RightOutlined,
+  DeleteOutlined,
+} from '@ant-design/icons';
 import type { SchemaNode, SchemaNodeType, CompositionKind } from '../../utils/schema/schema-types';
-import type { IconName } from '@blueprintjs/icons';
 
 interface TreeNodeProps {
   node: SchemaNode;
   depth: number;
-  isSelected: boolean;
-  isAncestor: boolean;
+  selectedNodeId: string | null;
   onSelect: (id: string) => void;
   onToggleExpand: (id: string) => void;
   onDelete: (id: string) => void;
   ancestorIds: Set<string>;
 }
 
-function getTypeIcon(type?: SchemaNodeType, compositionKind?: CompositionKind): IconName {
-  if (compositionKind) return 'help';
+function getTypeIcon(type?: SchemaNodeType, compositionKind?: CompositionKind): React.ReactNode {
+  if (compositionKind) return <QuestionCircleOutlined />;
   switch (type) {
     case 'object':
-      return 'folder-open';
+      return <span style={{ fontWeight: 'bold', fontSize: 14, fontFamily: 'monospace' }}>{'{}'}</span>;
     case 'array':
-      return 'list';
+      return <UnorderedListOutlined />;
     case 'string':
-      return 'font';
+      return <FontSizeOutlined />;
     case 'number':
     case 'integer':
-      return 'numerical';
+      return <NumberOutlined />;
     case 'boolean':
-      return 'segmented-control';
+      return <CheckSquareOutlined />;
     default:
-      return 'help';
+      return <QuestionCircleOutlined />;
   }
 }
 
@@ -71,13 +79,14 @@ function isExpandable(node: SchemaNode): boolean {
 export const TreeNodeComponent = React.memo(function TreeNodeComponent({
   node,
   depth,
-  isSelected,
-  isAncestor,
+  selectedNodeId,
   onSelect,
   onToggleExpand,
   onDelete,
   ancestorIds,
 }: TreeNodeProps): React.JSX.Element {
+  const isSelected = node.id === selectedNodeId;
+  const isAncestor = ancestorIds.has(node.id);
   const handleSelect = useCallback((): void => {
     onSelect(node.id);
   }, [onSelect, node.id]);
@@ -114,29 +123,31 @@ export const TreeNodeComponent = React.memo(function TreeNodeComponent({
       >
         {expandable ? (
           <span className="pokey-tree-node-chevron" onClick={handleToggle}>
-            <Icon icon={node.expanded ? 'chevron-down' : 'chevron-right'} size={14} />
+            <span style={{ fontSize: 14 }}>{node.expanded ? <DownOutlined /> : <RightOutlined />}</span>
           </span>
         ) : (
           <span className="pokey-tree-node-chevron pokey-tree-node-chevron--spacer" />
         )}
 
-        <Icon icon={getTypeIcon(node.type, node.compositionKind)} size={14} className="pokey-tree-node-icon" />
+        <span className="pokey-tree-node-icon" style={{ fontSize: 14 }}>
+          {getTypeIcon(node.type, node.compositionKind)}
+        </span>
 
         <span className="pokey-tree-node-label">
-          {node.displayName}
+          {node.name === '(items)' ? 'List Type' : node.displayName}
           <span className="pokey-tree-node-type"> ({getTypeLabel(node.type, node.compositionKind)})</span>
         </span>
 
         {node.required && (
-          <span className="pokey-tree-node-required" title="Required">
-            ●
-          </span>
+          <Tooltip title="Required" mouseEnterDelay={0.15}>
+            <span className="pokey-tree-node-required">●</span>
+          </Tooltip>
         )}
 
         {!isRoot && (
           <Button
-            icon="trash"
-            variant="minimal"
+            icon={<DeleteOutlined />}
+            type="text"
             size="small"
             className="pokey-tree-node-delete"
             onClick={handleDelete}
@@ -152,8 +163,7 @@ export const TreeNodeComponent = React.memo(function TreeNodeComponent({
               key={child.id}
               node={child}
               depth={depth + 1}
-              isSelected={child.id === (isSelected ? node.id : '') /* handled by parent */}
-              isAncestor={ancestorIds.has(child.id)}
+              selectedNodeId={selectedNodeId}
               onSelect={onSelect}
               onToggleExpand={onToggleExpand}
               onDelete={onDelete}

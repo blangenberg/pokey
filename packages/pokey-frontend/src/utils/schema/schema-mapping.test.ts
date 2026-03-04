@@ -468,6 +468,6 @@ describe('treeToJsonSchema — edge cases', () => {
     const schema = { type: 'object' };
     const tree = jsonSchemaToTree(schema);
     const output = treeToJsonSchema(tree);
-    expect(output).toEqual({ type: 'object' });
+    expect(output).toEqual({ type: 'object', additionalProperties: true });
   });
 });
