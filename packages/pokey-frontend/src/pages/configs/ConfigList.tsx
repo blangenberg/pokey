@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Input, Select, Spin, Result } from 'antd';
-import { SearchOutlined, IdcardOutlined, PlusOutlined, FilterOutlined } from '@ant-design/icons';
+import { Button, Input, Modal, Select, Spin, Result } from 'antd';
+import { CodeOutlined, SearchOutlined, IdcardOutlined, PlusOutlined, FilterOutlined } from '@ant-design/icons';
 import { ListPage } from '../../components/shared/ListPage';
 import { SchemaSelector } from '../../components/shared/SchemaSelector';
 import { usePagination } from '../../hooks/use-pagination';
@@ -9,7 +9,7 @@ import { useSchemaNameCache } from '../../hooks/use-schema-name-cache';
 import { api } from '../../services/api';
 import { showErrorToast } from '../../services/toaster';
 import { buildConfigParams, buildFilterSearchParams } from '../../utils/list-params';
-import type { ConfigListItem, PaginatedResponse } from 'pokey-common';
+import type { Config, ConfigListItem, PaginatedResponse } from 'pokey-common';
 import './config-list.scss';
 
 interface SchemaOption {
@@ -38,6 +38,11 @@ export function ConfigList(): React.JSX.Element {
   const [items, setItems] = useState<ConfigListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewJson, setPreviewJson] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewName, setPreviewName] = useState('');
 
   const pagination = usePagination();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -149,6 +154,24 @@ export function ConfigList(): React.JSX.Element {
     return { name: entry.name, className: '' };
   }
 
+  const handlePreview = useCallback(async (configId: string, configName: string, e: React.MouseEvent): Promise<void> => {
+    e.stopPropagation();
+    setPreviewName(configName);
+    setPreviewJson(null);
+    setPreviewLoading(true);
+    setPreviewOpen(true);
+
+    try {
+      const config = await api.get(`configs/${configId}`).json<Config>();
+      setPreviewJson(JSON.stringify(config.configData, null, 2));
+    } catch {
+      showErrorToast('Failed to load config data.');
+      setPreviewOpen(false);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, []);
+
   const filterBar = (
     <>
       <SchemaSelector value={schemaFilter} onSelect={handleSchemaSelect} placeholder="Filter by schema..." />
@@ -228,6 +251,7 @@ export function ConfigList(): React.JSX.Element {
           <tr>
             <th>ID</th>
             <th>Name</th>
+            <th className="pokey-config-preview-col">Data</th>
             <th>Schema</th>
             <th>Status</th>
             <th>Created</th>
@@ -247,6 +271,17 @@ export function ConfigList(): React.JSX.Element {
               >
                 <td className="pokey-config-id">{config.id}</td>
                 <td className="pokey-config-name">{config.name}</td>
+                <td className="pokey-config-preview-col">
+                  <Button
+                    size="small"
+                    icon={<CodeOutlined />}
+                    onClick={(e): void => {
+                      void handlePreview(config.id, config.name, e);
+                    }}
+                  >
+                    JSON
+                  </Button>
+                </td>
                 <td className={schemaDisplay.className}>{schemaDisplay.name}</td>
                 <td className={`pokey-config-status pokey-config-status--${config.status}`}>{config.status}</td>
                 <td>{config.createdAt}</td>
@@ -260,15 +295,36 @@ export function ConfigList(): React.JSX.Element {
   };
 
   return (
-    <ListPage
-      filterBar={filterBar}
-      createButton={createButton}
-      table={renderTable()}
-      canGoBack={pagination.canGoBack}
-      canGoNext={pagination.canGoNext}
-      onBack={pagination.goBack}
-      onNext={pagination.goNext}
-      loading={loading && !initialLoad}
-    />
+    <>
+      <ListPage
+        filterBar={filterBar}
+        createButton={createButton}
+        table={renderTable()}
+        canGoBack={pagination.canGoBack}
+        canGoNext={pagination.canGoNext}
+        onBack={pagination.goBack}
+        onNext={pagination.goNext}
+        loading={loading && !initialLoad}
+      />
+
+      <Modal
+        open={previewOpen}
+        title={`Config JSON: ${previewName}`}
+        onCancel={(): void => {
+          setPreviewOpen(false);
+        }}
+        footer={null}
+        width={700}
+        destroyOnHidden
+      >
+        {previewLoading ? (
+          <div className="pokey-config-preview-loading">
+            <Spin />
+          </div>
+        ) : (
+          <pre className="pokey-config-preview-json">{previewJson}</pre>
+        )}
+      </Modal>
+    </>
   );
 }

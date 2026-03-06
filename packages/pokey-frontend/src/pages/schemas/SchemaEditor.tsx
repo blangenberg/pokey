@@ -13,7 +13,6 @@ import {
   NumberOutlined,
   CheckSquareOutlined,
   UnorderedListOutlined,
-  QuestionCircleOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { StatusToggle } from '../../components/shared/StatusToggle';
@@ -32,8 +31,8 @@ import {
   getUniqueSiblingName,
 } from '../../utils/schema/schema-reducer';
 import { jsonSchemaToTree, treeToJsonSchema, displayNameToId } from '../../utils/schema/schema-mapping';
-import { createEmptyNode, createCompositionNode, createRootNode, getTypeDisplayName } from '../../utils/schema/schema-types';
-import type { SchemaNodeType, CompositionKind, SchemaNode } from '../../utils/schema/schema-types';
+import { createEmptyNode, createRootNode, getTypeDisplayName } from '../../utils/schema/schema-types';
+import type { SchemaNodeType, SchemaNode } from '../../utils/schema/schema-types';
 import { api } from '../../services/api';
 import { showSuccessToast, showErrorToast, showWarningToast } from '../../services/toaster';
 import { validateSchema } from '../../utils/schema/schema-validation';
@@ -218,17 +217,6 @@ export function SchemaEditor(): React.JSX.Element {
     [state.selectedNodeId, state.root],
   );
 
-  const handleAddComposition = useCallback(
-    (kind: CompositionKind): void => {
-      const parentId = state.selectedNodeId ?? state.root.id;
-      const actualParent = findNode(state.root, parentId) ?? state.root;
-      const uniqueName = getUniqueSiblingName(kind, actualParent.children);
-      const node = createCompositionNode(kind, uniqueName);
-      dispatch({ type: 'ADD_NODE', payload: { parentId, node } });
-    },
-    [state.selectedNodeId, state.root],
-  );
-
   const handleSelect = useCallback((nodeId: string): void => {
     dispatch({ type: 'SELECT_NODE', payload: nodeId });
   }, []);
@@ -339,30 +327,6 @@ export function SchemaEditor(): React.JSX.Element {
         handleAddNode('array');
       },
     },
-    {
-      key: 'allOf',
-      label: 'All Of',
-      icon: <QuestionCircleOutlined />,
-      onClick: (): void => {
-        handleAddComposition('allOf');
-      },
-    },
-    {
-      key: 'anyOf',
-      label: 'Any Of',
-      icon: <QuestionCircleOutlined />,
-      onClick: (): void => {
-        handleAddComposition('anyOf');
-      },
-    },
-    {
-      key: 'oneOf',
-      label: 'One Of',
-      icon: <QuestionCircleOutlined />,
-      onClick: (): void => {
-        handleAddComposition('oneOf');
-      },
-    },
   ];
 
   if (loading) {
@@ -375,7 +339,6 @@ export function SchemaEditor(): React.JSX.Element {
 
   return (
     <div className="pokey-schema-editor">
-      <div className="pokey-schema-editor-uuid">{id ?? '\u00A0'}</div>
       <div className="pokey-schema-editor-topbar">
         <div className="pokey-schema-editor-topbar-left">
           <Input
@@ -444,6 +407,7 @@ export function SchemaEditor(): React.JSX.Element {
           </Button>
         </div>
       </div>
+      <div className="pokey-schema-editor-uuid">{id ? `Schema ID: ${id}` : '\u00A0'}</div>
       <div className="pokey-schema-editor-body" ref={containerRef}>
         <div className="pokey-schema-editor-left" style={{ width: leftWidth }}>
           <div className="pokey-schema-editor-tree" role="tree">

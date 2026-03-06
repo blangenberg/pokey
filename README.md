@@ -175,3 +175,7 @@ npm test
 ```
 
 Runs Vitest across all workspace packages.
+
+## Future Enhancements
+
+Ajv supports the composition keywords `allOf`, `anyOf`, and `oneOf`, but these have been intentionally omitted from the Schema Editor for simplicity. These keywords allow combining multiple sub-schemas with logical AND, OR, and exclusive-OR semantics. This is useful for polymorphic configurations, conditional validation, and union types. However, polymorphic schemas are more complex and weaken strict type safety. It's best to avoid this if possible.

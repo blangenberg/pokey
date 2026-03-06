@@ -85,8 +85,11 @@ export const SchemaSelector = React.memo(function SchemaSelector({
   const handleChange = useCallback(
     (inputValue: string): void => {
       handleSearch(inputValue);
+      if (inputValue === '' && value) {
+        onSelect(null);
+      }
     },
-    [handleSearch],
+    [handleSearch, value, onSelect],
   );
 
   return (

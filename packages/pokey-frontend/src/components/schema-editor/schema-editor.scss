@@ -27,7 +27,6 @@
   margin-left: 3px;
   margin-bottom: 12px;
   font-family: monospace;
-  user-select: all;
 }
 
 .pokey-schema-editor-topbar-right {
@@ -79,7 +78,7 @@
 .pokey-schema-editor-right {
   flex: 1;
   overflow: auto;
-  padding: 6px 20px;
+  padding:  6px 20px;
   min-width: 0;
 }
 

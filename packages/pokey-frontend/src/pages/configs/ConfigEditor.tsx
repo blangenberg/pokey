@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useBlocker, useLocation } from 'react-router-dom';
-import { Button, Input, Spin, Modal, Result } from 'antd';
-import { SaveOutlined, CheckOutlined, CloseOutlined, CopyOutlined, DatabaseOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
+import { Alert, Button, Input, Spin, Modal, Result } from 'antd';
+import {
+  SaveOutlined,
+  CheckOutlined,
+  CloseOutlined,
+  CodeOutlined,
+  CopyOutlined,
+  DatabaseOutlined,
+  EditOutlined,
+  EyeOutlined,
+} from '@ant-design/icons';
 import { StatusToggle } from '../../components/shared/StatusToggle';
 import { SchemaSelector } from '../../components/shared/SchemaSelector';
 import { DynamicFormRenderer } from '../../components/config-editor/DynamicFormRenderer';
@@ -39,6 +48,9 @@ export function ConfigEditor(): React.JSX.Element {
   const [saving, setSaving] = useState(false);
   const [showSchemaSearch, setShowSchemaSearch] = useState(true);
   const [schemaPreviewOpen, setSchemaPreviewOpen] = useState(false);
+  const [jsonEditOpen, setJsonEditOpen] = useState(false);
+  const [jsonEditText, setJsonEditText] = useState('');
+  const [jsonEditError, setJsonEditError] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
   const skipBlockRef = useRef(false);
@@ -226,6 +238,37 @@ export function ConfigEditor(): React.JSX.Element {
     setFormData(newData);
   }, []);
 
+  const handleJsonEditOpen = useCallback((): void => {
+    setJsonEditText(JSON.stringify(formData, null, 2));
+    setJsonEditError(null);
+    setJsonEditOpen(true);
+  }, [formData]);
+
+  const handleJsonEditOk = useCallback((): void => {
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(jsonEditText) as Record<string, unknown>;
+    } catch {
+      setJsonEditError('Invalid JSON. Please check your syntax.');
+      return;
+    }
+
+    if (schemaData) {
+      const errors = validateConfigData(schemaData, parsed);
+      if (errors.size > 0) {
+        const messages = Array.from(errors.entries())
+          .map(([path, msg]) => `${path}: ${msg}`)
+          .join('; ');
+        setJsonEditError(`Validation failed: ${messages}`);
+        return;
+      }
+    }
+
+    setFormData(parsed);
+    setValidationErrors(new Map());
+    setJsonEditOpen(false);
+  }, [jsonEditText, schemaData]);
+
   const canSave = configName.trim().length > 0 && selectedSchema !== null && !saving;
 
   if (loading) {
@@ -317,6 +360,9 @@ export function ConfigEditor(): React.JSX.Element {
           <Button icon={<CheckOutlined />} onClick={handleValidate}>
             Validate
           </Button>
+          <Button icon={<CodeOutlined />} onClick={handleJsonEditOpen}>
+            Edit JSON
+          </Button>
           <Button
             type="primary"
             icon={<SaveOutlined />}
@@ -340,6 +386,7 @@ export function ConfigEditor(): React.JSX.Element {
         </div>
       </div>
 
+      <div className="pokey-config-editor-uuid">{id ? `Config ID: ${id}` : '\u00A0'}</div>
       <div className="pokey-config-editor-body">
         {!schemaData ? (
           <Result icon={<DatabaseOutlined />} title="Select a schema" subTitle="Select a schema to begin configuring." />
@@ -363,6 +410,48 @@ export function ConfigEditor(): React.JSX.Element {
           style={{ fontFamily: '"Roboto Mono", monospace', fontSize: 13, minHeight: 400, width: '100%' }}
           aria-label="Schema JSON"
         />
+      </Modal>
+
+      <Modal
+        open={jsonEditOpen}
+        title="Edit Config JSON"
+        onCancel={(): void => {
+          setJsonEditOpen(false);
+        }}
+        afterOpenChange={(open): void => {
+          if (open) {
+            setJsonEditText(JSON.stringify(formData, null, 2));
+            setJsonEditError(null);
+          }
+        }}
+        width={700}
+        mask={{ closable: false }}
+        footer={
+          <>
+            <Button
+              onClick={(): void => {
+                setJsonEditOpen(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="primary" onClick={handleJsonEditOk}>
+              OK
+            </Button>
+          </>
+        }
+        destroyOnHidden
+      >
+        <Input.TextArea
+          value={jsonEditText}
+          onChange={(e): void => {
+            setJsonEditText(e.target.value);
+            setJsonEditError(null);
+          }}
+          style={{ fontFamily: '"Roboto Mono", monospace', fontSize: 13, minHeight: 400, width: '100%' }}
+          aria-label="Config JSON editor"
+        />
+        {jsonEditError && <Alert type="error" showIcon style={{ marginTop: 10 }} title={jsonEditError} />}
       </Modal>
 
       <Modal
