@@ -47,7 +47,7 @@ const DEFAULT_LEFT_WIDTH = 350;
 const MIN_LEFT = 200;
 const MIN_RIGHT = 400;
 
-export function SchemaEditor(): React.JSX.Element {
+export default function SchemaEditor(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();

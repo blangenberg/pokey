@@ -1,13 +1,24 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
+import { Spin } from 'antd';
 import { AuthGuard } from './components/AuthGuard';
 import { OktaSignin } from './components/OktaSignin';
 import { OktaRedirectHandler } from './components/OktaRedirectHandler';
 import { Page } from './components/Page';
-import { SchemaList } from './pages/schemas/SchemaList';
-import { SchemaEditor } from './pages/schemas/SchemaEditor';
-import { ConfigList } from './pages/configs/ConfigList';
-import { ConfigEditor } from './pages/configs/ConfigEditor';
 import './styles/global.scss';
+
+const SchemaList = lazy(() => import('./pages/schemas/SchemaList'));
+const SchemaEditor = lazy(() => import('./pages/schemas/SchemaEditor'));
+const ConfigList = lazy(() => import('./pages/configs/ConfigList'));
+const ConfigEditor = lazy(() => import('./pages/configs/ConfigEditor'));
+
+function LazyFallback(): React.JSX.Element {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+      <Spin size="large" />
+    </div>
+  );
+}
 
 function AuthLayout(): React.JSX.Element {
   return (
@@ -20,7 +31,9 @@ function AuthLayout(): React.JSX.Element {
 function PageLayout(): React.JSX.Element {
   return (
     <Page>
-      <Outlet />
+      <Suspense fallback={<LazyFallback />}>
+        <Outlet />
+      </Suspense>
     </Page>
   );
 }

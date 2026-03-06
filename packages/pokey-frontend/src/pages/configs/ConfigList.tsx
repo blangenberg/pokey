@@ -26,7 +26,7 @@ const STATUS_OPTIONS = [
 
 const DEBOUNCE_MS = 300;
 
-export function ConfigList(): React.JSX.Element {
+export default function ConfigList(): React.JSX.Element {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REQUIRED_MAJOR=22
+REQUIRED_MAJOR=24
 
 echo "==> Checking Node.js version..."
 

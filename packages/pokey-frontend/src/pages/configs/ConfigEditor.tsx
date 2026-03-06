@@ -29,7 +29,7 @@ interface SchemaOption {
   status: string;
 }
 
-export function ConfigEditor(): React.JSX.Element {
+export default function ConfigEditor(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();

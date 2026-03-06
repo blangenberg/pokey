@@ -18,7 +18,7 @@ const STATUS_OPTIONS = [
 
 const DEBOUNCE_MS = 300;
 
-export function SchemaList(): React.JSX.Element {
+export default function SchemaList(): React.JSX.Element {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
