@@ -3,7 +3,7 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/*.js', '**/*.mjs', '**/*.cjs', '**/vite.config.ts', '**/vitest.config.ts'],
+    ignores: ['**/dist/**', '**/node_modules/**', '**/*.js', '**/*.mjs', '**/*.cjs', '**/vite.config.ts', '**/vitest.config.ts', '**/vitest.functional.config.ts'],
   },
   ...tseslint.configs.strictTypeChecked,
   eslintConfigPrettier,
@@ -27,6 +27,7 @@ export default tseslint.config(
     files: ['**/__tests__/**', '**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
 );

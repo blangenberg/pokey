@@ -17,8 +17,11 @@
   },
   "devDependencies": {
     "typescript": "^5.7.0",
-    "vite": "^6.0.0",
+    "vite": "^7.3.1",
     "vite-plugin-dts": "^4.0.0",
-    "vitest": "^3.0.0"
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "uuid": "^13.0.0"
   }
 }

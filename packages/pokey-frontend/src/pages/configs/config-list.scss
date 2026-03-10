@@ -1,0 +1,96 @@
+@use '../../styles/colors' as *;
+
+.pokey-config-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    border: 1px solid $aura-gray;
+    padding: 8px 12px;
+    text-align: left;
+  }
+
+  thead th {
+    background: $aura-cool-gray;
+  }
+
+  tbody tr:nth-child(even) {
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+  tbody tr:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+
+.pokey-config-row {
+  cursor: pointer;
+}
+
+.pokey-config-id {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+  opacity: 0.7;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pokey-config-name {
+  font-weight: 600;
+}
+
+.pokey-config-status {
+  text-transform: capitalize;
+
+  &--active {
+    color: $status-active-color;
+  }
+
+  &--disabled {
+    color: $status-disabled-color;
+  }
+}
+
+.pokey-config-schema--disabled {
+  opacity: 0.5;
+}
+
+.pokey-config-schema--deleted {
+  font-style: italic;
+  opacity: 0.5;
+}
+
+.pokey-config-schema--unknown {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+  opacity: 0.5;
+}
+
+.pokey-config-preview-col {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.pokey-config-preview-loading {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
+
+.pokey-config-preview-json {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 13px;
+  background: $aura-cool-gray;
+  border: 1px solid $aura-gray;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 0;
+  max-height: 500px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

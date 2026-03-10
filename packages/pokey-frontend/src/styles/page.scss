@@ -1,0 +1,133 @@
+@use 'colors';
+
+.aura-page {
+  background: #f8f8f8;
+  min-height: 100vh;
+
+  .aura-page-env {
+    text-transform: uppercase;
+  }
+
+  .aura-page-nav {
+    top: 0;
+    position: fixed;
+    width: 100%;
+    z-index: 8;
+
+    .aura-navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 50px;
+      padding: 0 20px;
+      background-color: colors.$aura-american-blue;
+      background: linear-gradient(colors.$aura-american-blue, colors.$aura-denim-blue 300%);
+
+      .aura-navbar-left,
+      .aura-navbar-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .aura-navbar-divider {
+        width: 1px;
+        height: 20px;
+        background: rgba(255, 255, 255, 0.15);
+        margin: 0 4px;
+      }
+
+      .ant-btn-text {
+        color: #f5f8fa;
+      }
+
+      .ant-tag {
+        background-color: #bfccd6;
+        color: #182026;
+        border: none;
+        cursor: pointer;
+
+        &:hover {
+          background-color: rgba(191, 204, 214, 0.85);
+        }
+      }
+    }
+  }
+
+  .aura-logo {
+    cursor: pointer;
+    margin-right: 10px;
+  }
+
+  .aura-page-bod {
+    display: block;
+    padding: 120px 20px 10px 20px;
+    width: 100%;
+    box-sizing: border-box;
+    z-index: 1;
+  }
+
+  .aura-page-head {
+    position: fixed;
+    top: 50px;
+    left: 0;
+    right: 0;
+    height: 50px;
+    background: linear-gradient(colors.$aura-gray, #f4f4f4);
+    box-shadow: 0 2px 2px -1px rgba(#bbb, 0.75);
+    display: flex;
+    align-items: center;
+    z-index: 11;
+
+    .aura-page-head-title {
+      margin: 0 20px;
+      line-height: 50px;
+    }
+
+    .aura-page-head-subnav {
+      flex-grow: 1;
+      padding-right: 20px;
+    }
+  }
+}
+
+.aura-session-menu {
+  background-color: colors.$aura-night-blue;
+  background: linear-gradient(colors.$aura-night-blue, colors.$aura-denim-blue 300%);
+  color: #f5f8fa;
+  border-radius: 6px;
+  padding: 4px;
+
+  .ant-dropdown-menu-item {
+    color: #f5f8fa;
+
+    &:hover {
+      background: rgba(138, 155, 168, 0.3);
+    }
+
+    .anticon {
+      color: #a7b6c2;
+    }
+  }
+
+  .ant-dropdown-menu-item-disabled {
+    color: #a7b6c2 !important;
+
+    .anticon {
+      color: #a7b6c2 !important;
+    }
+  }
+
+  .ant-dropdown-menu-item-danger {
+    color: #ff7373;
+
+    &:hover {
+      color: #fff;
+      background: rgba(255, 115, 115, 0.2);
+    }
+  }
+
+  .ant-dropdown-menu-item-divider {
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+}

@@ -19,7 +19,9 @@
     "lint": "eslint .",
     "prepare": "husky",
     "start": "npm run init:db && concurrently --names backend,frontend --prefix-colors blue,green \"npm run dev -w pokey-backend\" \"npm run dev -w pokey-frontend\"",
-    "test": "npm test --workspaces --if-present"
+    "test": "npm test --workspaces --if-present",
+    "test:functional": "npm run test:functional -w pokey-backend",
+    "test:all": "npm test --workspaces --if-present && npm run test:functional -w pokey-backend"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

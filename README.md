@@ -16,13 +16,13 @@ A flexible, schema-driven configuration system for front-end content. Define JSO
 
 | Layer         | Technology                                   |
 | ------------- | -------------------------------------------- |
-| Frontend      | React 19, Vite, Ladle, Ky                    |
-| Backend       | Node 22, Express (local), AWS Lambda (prod)  |
+| Frontend      | React 19, Vite, Ant Design, Ladle, Ky        |
+| Backend       | Node 24, Express (local), AWS Lambda (prod)  |
 | Database      | DynamoDB (local via `amazon/dynamodb-local`) |
 | Validation    | Ajv (JSON Schema)                            |
 | Observability | prom-client (Prometheus)                     |
 | Build         | Vite, TypeScript (strict)                    |
-| Testing       | Vitest                                       |
+| Testing       | Vitest, Testcontainers                       |
 | Deployment    | AWS SAM                                      |
 
 ## Directory Structure
@@ -33,7 +33,7 @@ pokey/
 ├── scripts/                   # Developer onboarding scripts
 │   ├── init-podman.sh         # Podman setup + DynamoDB image pull
 │   ├── init-db.sh             # Start DynamoDB Local + create tables
-│   └── init-node.sh           # Verify Node 22 + install dependencies
+│   └── init-node.sh           # Verify Node 24 + install dependencies
 ├── packages/
 │   ├── pokey-common/          # Shared TypeScript types, enums, API contracts
 │   ├── pokey-backend/         # Express server, Lambda handlers, DynamoDB layer
@@ -49,7 +49,7 @@ pokey/
 
 ### Prerequisites
 
-- **Node.js 22+**
+- **Node.js 24+**
 - **Podman** (or Docker with the alias in place)
 
 ### Quick Setup
@@ -61,7 +61,7 @@ npm run init
 This runs four steps in order:
 
 1. **init:podman** — Verifies Podman is installed, adds a `docker → podman` alias to `~/.zshrc`, and pulls the `amazon/dynamodb-local` image.
-2. **init:node** — Verifies Node 22+ is installed and runs `npm install`.
+2. **init:node** — Verifies Node 24+ is installed and runs `npm install`.
 3. **init:db** — Starts the DynamoDB Local container and creates the required tables.
 4. **init:build** — Builds all packages in dependency order (common → backend → frontend).
 
@@ -171,7 +171,15 @@ curl -s -X POST http://localhost:3001/api/schemas/<schema-id>/activate | jq .
 ### Running Tests
 
 ```bash
-npm test
+npm test              # Unit tests only (fast, ~2s)
+npm run test:functional   # Functional tests only (uses Testcontainers + DynamoDB Local)
+npm run test:all          # Both unit and functional
 ```
 
-Runs Vitest across all workspace packages.
+**Unit tests** use mocked dependencies and run across all workspace packages. They cover handler logic, edge cases, error paths, validation, and utility functions. These are the primary test tier and should be written for all new handler logic and utility code.
+
+**Functional tests** spin up a real DynamoDB Local container via Testcontainers and run handlers against it with real reads and writes. They verify that the full stack works end-to-end — schema and config CRUD, lifecycle operations, backward-compatibility enforcement, and validation rejection. These require Podman (or Docker) to be running.
+
+## Future Enhancements
+
+Ajv supports the composition keywords `allOf`, `anyOf`, and `oneOf`, but these have been intentionally omitted from the Schema Editor for simplicity. These keywords allow combining multiple sub-schemas with logical AND, OR, and exclusive-OR semantics. This is useful for polymorphic configurations, conditional validation, and union types. However, polymorphic schemas are more complex and weaken strict type safety. It's best to avoid this if possible.
