@@ -22,7 +22,7 @@ A flexible, schema-driven configuration system for front-end content. Define JSO
 | Validation    | Ajv (JSON Schema)                            |
 | Observability | prom-client (Prometheus)                     |
 | Build         | Vite, TypeScript (strict)                    |
-| Testing       | Vitest                                       |
+| Testing       | Vitest, Testcontainers                       |
 | Deployment    | AWS SAM                                      |
 
 ## Directory Structure
@@ -171,10 +171,14 @@ curl -s -X POST http://localhost:3001/api/schemas/<schema-id>/activate | jq .
 ### Running Tests
 
 ```bash
-npm test
+npm test              # Unit tests only (fast, ~2s)
+npm run test:functional   # Functional tests only (uses Testcontainers + DynamoDB Local)
+npm run test:all          # Both unit and functional
 ```
 
-Runs Vitest across all workspace packages.
+**Unit tests** use mocked dependencies and run across all workspace packages. They cover handler logic, edge cases, error paths, validation, and utility functions. These are the primary test tier and should be written for all new handler logic and utility code.
+
+**Functional tests** spin up a real DynamoDB Local container via Testcontainers and run handlers against it with real reads and writes. They verify that the full stack works end-to-end — schema and config CRUD, lifecycle operations, backward-compatibility enforcement, and validation rejection. These require Podman (or Docker) to be running.
 
 ## Future Enhancements
 
