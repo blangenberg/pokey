@@ -1,6 +1,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
+  BatchGetCommand,
   GetCommand,
   PutCommand,
   QueryCommand,
@@ -59,6 +60,31 @@ export class DataLayer {
   async get<T>(tableName: string, key: Record<string, unknown>): Promise<T | undefined> {
     const result = await this.client.send(new GetCommand({ TableName: tableName, Key: key }));
     return result.Item as T | undefined;
+  }
+
+  async batchGet<T>(tableName: string, keys: Record<string, unknown>[]): Promise<T[]> {
+    if (keys.length === 0) return [];
+
+    const results: T[] = [];
+    let unprocessed: Record<string, unknown>[] | undefined = keys;
+    const maxAttempts = 4;
+
+    for (let attempt = 0; unprocessed && unprocessed.length > 0 && attempt < maxAttempts; attempt++) {
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 50 * Math.pow(2, attempt)));
+      }
+
+      const response = await this.client.send(
+        new BatchGetCommand({
+          RequestItems: { [tableName]: { Keys: unprocessed } },
+        }),
+      );
+
+      results.push(...((response.Responses?.[tableName] ?? []) as T[]));
+      unprocessed = response.UnprocessedKeys?.[tableName]?.Keys as Record<string, unknown>[] | undefined;
+    }
+
+    return results;
   }
 
   async put(tableName: string, item: Record<string, unknown>): Promise<void> {

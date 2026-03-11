@@ -17,6 +17,7 @@ import { createConfigCreateHandler } from '../handlers/config-handlers/create';
 import { createConfigUpdateHandler } from '../handlers/config-handlers/update';
 import { createConfigDisableHandler } from '../handlers/config-handlers/disable';
 import { createConfigActivateHandler } from '../handlers/config-handlers/activate';
+import { createConfigBulkGetHandler } from '../handlers/config-handlers/bulk-get';
 
 export function createRouter(deps: HandlerDependencies): Router {
   const router = Router();
@@ -31,6 +32,7 @@ export function createRouter(deps: HandlerDependencies): Router {
 
   // ── Config routes ───────────────────────────────────────────────────────
   router.get('/configs', expressAdapter(createConfigListHandler(deps)));
+  router.post('/configs/bulk', expressAdapter(createConfigBulkGetHandler(deps)));
   router.post('/configs', expressAdapter(createConfigCreateHandler(deps)));
   router.get('/configs/:id', expressAdapter(createConfigGetHandler(deps)));
   router.put('/configs/:id', expressAdapter(createConfigUpdateHandler(deps)));

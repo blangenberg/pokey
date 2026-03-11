@@ -1,5 +1,6 @@
 import { SchemaStatus, ConfigStatus } from '../enums/status';
 import type { JsonSchema } from './schema';
+import type { Config } from './config';
 
 // ── Schema API ──────────────────────────────────────────────────────────────
 
@@ -38,6 +39,17 @@ export interface ListConfigsParams {
   limit: number;
   nextToken?: string;
   status?: ConfigStatus;
+}
+
+// ── Bulk Config API ─────────────────────────────────────────────────────────
+
+export interface BulkGetConfigsRequest {
+  ids: string[];
+}
+
+export interface BulkGetConfigsResponse {
+  configs: Config[];
+  idsNotFound: string[];
 }
 
 // ── Shared Response Types ───────────────────────────────────────────────────

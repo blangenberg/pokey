@@ -7,6 +7,7 @@ import type { DateTimeUtil, UuidUtil } from 'pokey-common';
 export interface MockDependencies extends HandlerDependencies {
   dataLayer: {
     get: ReturnType<typeof vi.fn>;
+    batchGet: ReturnType<typeof vi.fn>;
     put: ReturnType<typeof vi.fn>;
     query: ReturnType<typeof vi.fn>;
     scan: ReturnType<typeof vi.fn>;
@@ -28,6 +29,7 @@ export function createMockDependencies(): MockDependencies {
   return {
     dataLayer: {
       get: vi.fn(),
+      batchGet: vi.fn().mockResolvedValue([]),
       put: vi.fn(),
       query: vi.fn().mockResolvedValue({ items: [], lastEvaluatedKey: undefined }),
       scan: vi.fn().mockResolvedValue({ items: [], lastEvaluatedKey: undefined }),

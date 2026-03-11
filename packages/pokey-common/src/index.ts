@@ -16,6 +16,8 @@ export type {
   CreateConfigRequest,
   UpdateConfigRequest,
   ListConfigsParams,
+  BulkGetConfigsRequest,
+  BulkGetConfigsResponse,
   PaginatedResponse,
   ErrorResponse,
 } from './types/api';

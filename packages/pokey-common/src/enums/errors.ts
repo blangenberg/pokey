@@ -27,6 +27,7 @@ export enum MetricEvent {
 
   // Config events
   CONFIG_GET = 'config_get',
+  CONFIG_BULK_GET = 'config_bulk_get',
   CONFIG_LIST = 'config_list',
   CONFIG_CREATE = 'config_create',
   CONFIG_UPDATE = 'config_update',

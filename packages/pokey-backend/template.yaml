@@ -151,6 +151,17 @@ Resources:
 
   # ── Config Functions ─────────────────────────────────────────────────────
 
+  ConfigBulkGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dist/lambda/config-bulk-get.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /configs/bulk
+            Method: post
+
   ConfigGetFunction:
     Type: AWS::Serverless::Function
     Properties:
