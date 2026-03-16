@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildDefaults, validateConfigData } from './config-helpers';
+import { buildDefaults, validateConfigData, orderConfigData } from './config-helpers';
 
 describe('buildDefaults', () => {
   it('returns empty object for schema with no properties', () => {
@@ -248,5 +248,117 @@ describe('validateConfigData', () => {
 
     const errors = validateConfigData(schema, { name: '', age: -5 });
     expect(errors.size).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('orderConfigData', () => {
+  it('reorders keys by schema _idx', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        beta: { type: 'string', _idx: 1 },
+        alpha: { type: 'string', _idx: 0 },
+        gamma: { type: 'string', _idx: 2 },
+      },
+    };
+
+    const data = { gamma: 'g', alpha: 'a', beta: 'b' };
+    const result = orderConfigData(schema, data);
+    expect(Object.keys(result)).toEqual(['alpha', 'beta', 'gamma']);
+  });
+
+  it('recurses into nested objects', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        outer: {
+          type: 'object',
+          _idx: 0,
+          properties: {
+            second: { type: 'string', _idx: 1 },
+            first: { type: 'string', _idx: 0 },
+          },
+        },
+      },
+    };
+
+    const data = { outer: { second: 's', first: 'f' } };
+    const result = orderConfigData(schema, data);
+    const outerKeys = Object.keys(result.outer as Record<string, unknown>);
+    expect(outerKeys).toEqual(['first', 'second']);
+  });
+
+  it('handles missing _idx gracefully by using schema property order', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        age: { type: 'number' },
+      },
+    };
+
+    const data = { age: 30, name: 'Alice' };
+    const result = orderConfigData(schema, data);
+    expect(Object.keys(result)).toEqual(['name', 'age']);
+  });
+
+  it('preserves extra data keys not in schema', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        known: { type: 'string', _idx: 0 },
+      },
+    };
+
+    const data = { extra: 'value', known: 'k' };
+    const result = orderConfigData(schema, data);
+    expect(Object.keys(result)).toEqual(['known', 'extra']);
+    expect(result.extra).toBe('value');
+  });
+
+  it('handles data with missing schema properties', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        alpha: { type: 'string', _idx: 0 },
+        beta: { type: 'string', _idx: 1 },
+      },
+    };
+
+    const data = { beta: 'b' };
+    const result = orderConfigData(schema, data);
+    expect(Object.keys(result)).toEqual(['beta']);
+  });
+});
+
+describe('orderConfigData — _idx functional ordering', () => {
+  it('respects non-alphabetical _idx order', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        apple: { type: 'string', _idx: 2 },
+        mango: { type: 'string', _idx: 1 },
+        zebra: { type: 'string', _idx: 0 },
+      },
+    };
+
+    const data = { apple: 'a', zebra: 'z', mango: 'm' };
+    const result = orderConfigData(schema, data);
+    expect(Object.keys(result)).toEqual(['zebra', 'mango', 'apple']);
+  });
+
+  it('follows updated _idx after schema reorder', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        apple: { type: 'string', _idx: 0 },
+        mango: { type: 'string', _idx: 1 },
+        zebra: { type: 'string', _idx: 2 },
+      },
+    };
+
+    const data = { apple: 'a', zebra: 'z', mango: 'm' };
+    const result = orderConfigData(schema, data);
+    expect(Object.keys(result)).toEqual(['apple', 'mango', 'zebra']);
   });
 });

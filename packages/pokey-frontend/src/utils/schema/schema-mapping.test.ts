@@ -445,6 +445,113 @@ describe('jsonSchemaToTree — property attributes', () => {
   });
 });
 
+describe('treeToJsonSchema — _idx writing', () => {
+  it('writes _idx on each property based on children order', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        count: { type: 'integer' },
+        enabled: { type: 'boolean' },
+      },
+    };
+
+    const tree = jsonSchemaToTree(schema);
+    const output = treeToJsonSchema(tree);
+    const props = output.properties as Record<string, Record<string, unknown>>;
+
+    expect(props.title?._idx).toBe(0);
+    expect(props.count?._idx).toBe(1);
+    expect(props.enabled?._idx).toBe(2);
+  });
+
+  it('writes _idx on nested object children independently', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        outer1: { type: 'string' },
+        nested: {
+          type: 'object',
+          properties: {
+            inner1: { type: 'string' },
+            inner2: { type: 'number' },
+          },
+        },
+      },
+    };
+
+    const tree = jsonSchemaToTree(schema);
+    const output = treeToJsonSchema(tree);
+    const props = output.properties as Record<string, Record<string, unknown>>;
+
+    expect(props.outer1?._idx).toBe(0);
+    expect(props.nested?._idx).toBe(1);
+
+    const nestedProps = (props.nested as Record<string, unknown>).properties as Record<string, Record<string, unknown>>;
+    expect(nestedProps.inner1?._idx).toBe(0);
+    expect(nestedProps.inner2?._idx).toBe(1);
+  });
+
+  it('does not store _idx in SchemaNode keywords or extraKeywords', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        field: { type: 'string', _idx: 0 },
+      },
+    };
+
+    const tree = jsonSchemaToTree(schema);
+    const fieldNode = tree.children[0];
+    expect(fieldNode?.keywords._idx).toBeUndefined();
+    expect(fieldNode?.extraKeywords._idx).toBeUndefined();
+  });
+});
+
+describe('jsonSchemaToTree — _idx sorting', () => {
+  it('sorts children by _idx regardless of insertion order', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        beta: { type: 'string', _idx: 2 },
+        alpha: { type: 'string', _idx: 0 },
+        gamma: { type: 'string', _idx: 1 },
+      },
+    };
+
+    const tree = jsonSchemaToTree(schema);
+    expect(tree.children.map((c) => c.name)).toEqual(['alpha', 'gamma', 'beta']);
+  });
+
+  it('handles schemas without _idx (backward compat)', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        age: { type: 'number' },
+      },
+    };
+
+    const tree = jsonSchemaToTree(schema);
+    expect(tree.children).toHaveLength(2);
+    expect(tree.children[0]?.name).toBe('name');
+    expect(tree.children[1]?.name).toBe('age');
+  });
+
+  it('places properties without _idx after those with _idx', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        noIdx: { type: 'string' },
+        hasIdx: { type: 'string', _idx: 0 },
+      },
+    };
+
+    const tree = jsonSchemaToTree(schema);
+    expect(tree.children[0]?.name).toBe('hasIdx');
+    expect(tree.children[1]?.name).toBe('noIdx');
+  });
+});
+
 describe('treeToJsonSchema — edge cases', () => {
   it('omits empty required array', () => {
     const schema = {
@@ -482,5 +589,93 @@ describe('treeToJsonSchema — edge cases', () => {
     const tree = jsonSchemaToTree(schema);
     const output = treeToJsonSchema(tree);
     expect(output).toEqual({ type: 'object', additionalProperties: true });
+  });
+});
+
+describe('_idx functional ordering', () => {
+  it('non-alphabetical _idx order survives a full round-trip', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        apple: { type: 'string', _idx: 2 },
+        mango: { type: 'string', _idx: 1 },
+        zebra: { type: 'string', _idx: 0 },
+      },
+    };
+
+    const tree = jsonSchemaToTree(schema);
+    expect(tree.children.map((c) => c.name)).toEqual(['zebra', 'mango', 'apple']);
+
+    const output = treeToJsonSchema(tree);
+    const props = output.properties as Record<string, Record<string, unknown>>;
+    expect(props.zebra?._idx).toBe(0);
+    expect(props.mango?._idx).toBe(1);
+    expect(props.apple?._idx).toBe(2);
+    expect(Object.keys(props)).toEqual(['zebra', 'mango', 'apple']);
+  });
+
+  it('updating _idx values reorders children after re-parse', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        apple: { type: 'string', _idx: 2 },
+        mango: { type: 'string', _idx: 1 },
+        zebra: { type: 'string', _idx: 0 },
+      },
+    };
+
+    const tree = jsonSchemaToTree(schema);
+    expect(tree.children.map((c) => c.name)).toEqual(['zebra', 'mango', 'apple']);
+
+    const appleNode = tree.children[2]!;
+    const zebraNode = tree.children[0]!;
+    const mangoNode = tree.children[1]!;
+    tree.children = [appleNode, zebraNode, mangoNode];
+
+    const output = treeToJsonSchema(tree);
+    const props = output.properties as Record<string, Record<string, unknown>>;
+    expect(props.apple?._idx).toBe(0);
+    expect(props.zebra?._idx).toBe(1);
+    expect(props.mango?._idx).toBe(2);
+
+    const reparsed = jsonSchemaToTree(output);
+    expect(reparsed.children.map((c) => c.name)).toEqual(['apple', 'zebra', 'mango']);
+  });
+
+  it('nested objects have independent _idx sequences', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        alpha: {
+          type: 'object',
+          _idx: 1,
+          properties: {
+            charlie: { type: 'string', _idx: 0 },
+            bravo: { type: 'string', _idx: 1 },
+          },
+        },
+        delta: { type: 'string', _idx: 0 },
+      },
+    };
+
+    const tree = jsonSchemaToTree(schema);
+    expect(tree.children.map((c) => c.name)).toEqual(['delta', 'alpha']);
+
+    const alphaNode = tree.children.find((c) => c.name === 'alpha')!;
+    expect(alphaNode.children.map((c) => c.name)).toEqual(['charlie', 'bravo']);
+
+    const output = treeToJsonSchema(tree);
+    const outerProps = output.properties as Record<string, Record<string, unknown>>;
+    expect(outerProps.delta?._idx).toBe(0);
+    expect(outerProps.alpha?._idx).toBe(1);
+
+    const innerProps = (outerProps.alpha as Record<string, unknown>).properties as Record<string, Record<string, unknown>>;
+    expect(innerProps.charlie?._idx).toBe(0);
+    expect(innerProps.bravo?._idx).toBe(1);
+
+    const reparsed = jsonSchemaToTree(output);
+    expect(reparsed.children.map((c) => c.name)).toEqual(['delta', 'alpha']);
+    const reparsedAlpha = reparsed.children.find((c) => c.name === 'alpha')!;
+    expect(reparsedAlpha.children.map((c) => c.name)).toEqual(['charlie', 'bravo']);
   });
 });

@@ -16,7 +16,7 @@ import { SchemaSelector } from '../../components/shared/SchemaSelector';
 import { DynamicFormRenderer } from '../../components/config-editor/DynamicFormRenderer';
 import { api } from '../../services/api';
 import { showSuccessToast, showErrorToast, showWarningToast } from '../../services/toaster';
-import { buildDefaults, validateConfigData } from '../../utils/config/config-helpers';
+import { buildDefaults, validateConfigData, orderConfigData } from '../../utils/config/config-helpers';
 import { statusToAction, statusActionLabel } from '../../utils/status-helpers';
 import type { Config, Schema } from 'pokey-common';
 import '../../components/config-editor/config-editor.scss';
@@ -198,18 +198,19 @@ export default function ConfigEditor(): React.JSX.Element {
     if (!selectedSchema) return;
 
     setSaving(true);
+    const orderedData = schemaData ? orderConfigData(schemaData, formData) : formData;
 
     try {
       if (isEditMode) {
         await api.put(`configs/${id as string}`, {
-          json: { schemaId: selectedSchema.id, configData: formData },
+          json: { schemaId: selectedSchema.id, configData: orderedData },
         });
         setSavedState(JSON.stringify({ name: configName, schemaId: selectedSchema.id, data: formData }));
         showSuccessToast('Config updated successfully.');
       } else {
         const result = await api
           .post('configs', {
-            json: { name: configName, schemaId: selectedSchema.id, configData: formData },
+            json: { name: configName, schemaId: selectedSchema.id, configData: orderedData },
           })
           .json<Config>();
         setSavedState(JSON.stringify({ name: configName, schemaId: selectedSchema.id, data: formData }));
@@ -222,7 +223,7 @@ export default function ConfigEditor(): React.JSX.Element {
     } finally {
       setSaving(false);
     }
-  }, [runValidation, validationErrors, selectedSchema, isEditMode, id, configName, formData, navigate]);
+  }, [runValidation, validationErrors, selectedSchema, isEditMode, id, configName, formData, schemaData, navigate]);
 
   const handleStatusToggle = useCallback(
     async (newStatus: string): Promise<void> => {
@@ -239,10 +240,11 @@ export default function ConfigEditor(): React.JSX.Element {
   }, []);
 
   const handleJsonEditOpen = useCallback((): void => {
-    setJsonEditText(JSON.stringify(formData, null, 2));
+    const orderedData = schemaData ? orderConfigData(schemaData, formData) : formData;
+    setJsonEditText(JSON.stringify(orderedData, null, 2));
     setJsonEditError(null);
     setJsonEditOpen(true);
-  }, [formData]);
+  }, [formData, schemaData]);
 
   const handleJsonEditOk = useCallback((): void => {
     let parsed: Record<string, unknown>;
@@ -420,7 +422,8 @@ export default function ConfigEditor(): React.JSX.Element {
         }}
         afterOpenChange={(open): void => {
           if (open) {
-            setJsonEditText(JSON.stringify(formData, null, 2));
+            const orderedData = schemaData ? orderConfigData(schemaData, formData) : formData;
+            setJsonEditText(JSON.stringify(orderedData, null, 2));
             setJsonEditError(null);
           }
         }}

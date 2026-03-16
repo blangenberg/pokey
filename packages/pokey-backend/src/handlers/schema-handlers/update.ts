@@ -29,6 +29,7 @@ export function createSchemaUpdateHandler(deps: HandlerDependencies): Handler {
 
       const newSchemaData = ensureAdditionalProperties(body.schemaData as Record<string, unknown>);
       const ajv = new Ajv({ allErrors: true });
+      ajv.addKeyword('_idx');
       try {
         ajv.compile(newSchemaData);
       } catch {

@@ -29,6 +29,7 @@ export function createConfigCreateHandler(deps: HandlerDependencies): Handler {
       }
 
       const ajv = new Ajv({ allErrors: true });
+      ajv.addKeyword('_idx');
       let validate: ReturnType<Ajv['compile']>;
       try {
         validate = ajv.compile(schema.schemaData);

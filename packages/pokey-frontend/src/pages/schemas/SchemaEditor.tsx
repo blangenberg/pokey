@@ -190,9 +190,10 @@ export default function SchemaEditor(): React.JSX.Element {
   const handleAddNode = useCallback(
     (type: SchemaNodeType): void => {
       let parentId = state.selectedNodeId ?? state.root.id;
-      const parent = findNode(state.root, parentId);
-      if (!parent || (parent.type !== 'object' && parent.type !== 'array' && !parent.compositionKind)) {
-        parentId = state.root.id;
+      const selected = findNode(state.root, parentId);
+      if (!selected || (selected.type !== 'object' && selected.type !== 'array' && !selected.compositionKind)) {
+        const ancestor = selected ? findParent(state.root, parentId) : undefined;
+        parentId = ancestor?.id ?? state.root.id;
       }
       const actualParent = findNode(state.root, parentId) ?? state.root;
 

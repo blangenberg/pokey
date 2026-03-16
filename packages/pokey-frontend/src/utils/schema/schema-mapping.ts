@@ -73,6 +73,7 @@ const STRUCTURAL_KEYWORDS = new Set([
   'dependencies',
   'definitions',
   '$defs',
+  '_idx',
 ]);
 
 function toCamelCase(str: string): string {
@@ -111,7 +112,13 @@ export function jsonSchemaToTree(schema: JsonSchema, name?: string, uuid: UuidUt
 
   if (schema.properties && typeof schema.properties === 'object') {
     const props = schema.properties as Record<string, JsonSchema>;
-    for (const [propName, propSchema] of Object.entries(props)) {
+    const propEntries = Object.entries(props);
+    propEntries.sort((a, b) => {
+      const idxA = typeof a[1]._idx === 'number' ? a[1]._idx : Infinity;
+      const idxB = typeof b[1]._idx === 'number' ? b[1]._idx : Infinity;
+      return idxA - idxB;
+    });
+    for (const [propName, propSchema] of propEntries) {
       const child = jsonSchemaToTree(propSchema, propName, uuid);
       child.required = requiredArray.includes(propName);
       children.push(child);
@@ -232,8 +239,10 @@ function buildSchemaNode(node: SchemaNode): JsonSchema {
       const properties: Record<string, JsonSchema> = {};
       const required: string[] = [];
 
-      for (const child of regularChildren) {
-        properties[child.name] = buildSchemaNode(child);
+      for (const [idx, child] of regularChildren.entries()) {
+        const childSchema = buildSchemaNode(child);
+        childSchema._idx = idx;
+        properties[child.name] = childSchema;
         if (child.required) {
           required.push(child.name);
         }
