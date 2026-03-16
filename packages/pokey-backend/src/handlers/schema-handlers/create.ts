@@ -20,6 +20,7 @@ export function createSchemaCreateHandler(deps: HandlerDependencies): Handler {
 
       const schemaData = ensureAdditionalProperties(body.schemaData as Record<string, unknown>);
       const ajv = new Ajv({ allErrors: true });
+      ajv.addKeyword('_idx');
       try {
         ajv.compile(schemaData);
       } catch {

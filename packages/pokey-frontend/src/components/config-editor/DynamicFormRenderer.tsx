@@ -52,6 +52,11 @@ export const DynamicFormRenderer = React.memo(function DynamicFormRenderer({
   );
 
   const propertyEntries = Object.entries(properties);
+  propertyEntries.sort((a, b) => {
+    const idxA = typeof (a[1] as Record<string, unknown>)._idx === 'number' ? ((a[1] as Record<string, unknown>)._idx as number) : Infinity;
+    const idxB = typeof (b[1] as Record<string, unknown>)._idx === 'number' ? ((b[1] as Record<string, unknown>)._idx as number) : Infinity;
+    return idxA - idxB;
+  });
 
   if (propertyEntries.length === 0) {
     return <p style={{ opacity: 0.5 }}>No properties defined in schema.</p>;

@@ -2,11 +2,21 @@ import Ajv from 'ajv';
 
 type JsonSchema = Record<string, unknown>;
 
+function sortedPropertyEntries(schema: JsonSchema): [string, JsonSchema][] {
+  const properties = (schema.properties ?? {}) as Record<string, JsonSchema>;
+  const entries = Object.entries(properties);
+  entries.sort((a, b) => {
+    const idxA = typeof a[1]._idx === 'number' ? a[1]._idx : Infinity;
+    const idxB = typeof b[1]._idx === 'number' ? b[1]._idx : Infinity;
+    return idxA - idxB;
+  });
+  return entries;
+}
+
 export function buildDefaults(schema: JsonSchema): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  const properties = (schema.properties ?? {}) as Record<string, JsonSchema>;
 
-  for (const [key, propSchema] of Object.entries(properties)) {
+  for (const [key, propSchema] of sortedPropertyEntries(schema)) {
     if (propSchema.default !== undefined) {
       result[key] = propSchema.default;
     } else if (propSchema.type === 'boolean') {
@@ -19,6 +29,29 @@ export function buildDefaults(schema: JsonSchema): Record<string, unknown> {
   }
 
   return result;
+}
+
+export function orderConfigData(schema: JsonSchema, data: Record<string, unknown>): Record<string, unknown> {
+  const ordered: Record<string, unknown> = {};
+  const properties = (schema.properties ?? {}) as Record<string, JsonSchema>;
+
+  for (const [key, propSchema] of sortedPropertyEntries(schema)) {
+    if (!(key in data)) continue;
+    const value = data[key];
+    if (propSchema.type === 'object' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      ordered[key] = orderConfigData(propSchema, value as Record<string, unknown>);
+    } else {
+      ordered[key] = value;
+    }
+  }
+
+  for (const [key, value] of Object.entries(data)) {
+    if (!(key in properties)) {
+      ordered[key] = value;
+    }
+  }
+
+  return ordered;
 }
 
 interface AjvError {
